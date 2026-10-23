@@ -25,6 +25,9 @@ class ChartView extends StatefulWidget {
     required this.cursor,
     required this.onCursorChanged,
     this.showStats = false,
+    this.showTags = true,
+    this.highlighted,
+    this.laneMode = false,
   });
 
   final VehicleLog log;
@@ -32,6 +35,13 @@ class ChartView extends StatefulWidget {
   final int? cursor;
   final ValueChanged<int> onCursorChanged;
   final bool showStats;
+  final bool showTags;
+
+  /// Channel index to emphasise; everything else is dimmed.
+  final int? highlighted;
+
+  /// When true each channel gets its own band with a real value scale.
+  final bool laneMode;
 
   @override
   State<ChartView> createState() => _ChartViewState();
@@ -41,9 +51,16 @@ class _ChartViewState extends State<ChartView> {
   double _start = 0;
   double _end = 1;
   double _width = 1;
+  double _chartHeight = 1;
+
+  // Vertical window in normalised units: 0 = channel minimum, 1 = maximum.
+  double _yTop = 0;
+  double _ySpan = 1;
 
   double _spanAtGesture = 0;
   double _anchorTime = 0;
+  double _ySpanAtGesture = 1;
+  double _anchorNorm = 0;
   bool _panZoomActive = false;
   bool _gestureHadTwoFingers = false;
 
@@ -68,6 +85,8 @@ class _ChartViewState extends State<ChartView> {
     final duration = widget.log.duration;
     _start = 0;
     _end = duration > 0 ? duration : 1;
+    _yTop = 0;
+    _ySpan = 1;
   }
 
   double _fractionAt(double dx) {
@@ -112,15 +131,17 @@ class _ChartViewState extends State<ChartView> {
     });
   }
 
-  void _beginPanZoom(double dx) {
-    _spanAtGesture = _end - _start;
-    _anchorTime = _timeAt(dx);
-    _panZoomActive = true;
+  double _verticalFraction(double dy) {
+    final plotHeight = math.max(1.0, _chartHeight - kPadTop - kPadBottom);
+    return ((dy - kPadTop) / plotHeight).clamp(0.0, 1.0).toDouble();
   }
 
-  void _onScaleStart(ScaleStartDetails details) {
-    _panZoomActive = false;
-    _gestureHadTwoFingers = false;
+  void _beginPanZoom(double dx, double dy) {
+    _spanAtGesture = _end - _start;
+    _anchorTime = _timeAt(dx);
+    _ySpanAtGesture = _ySpan;
+    _anchorNorm = _yTop + _verticalFraction(dy) * _ySpan;
+    _panZoomActive = true;
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
@@ -134,7 +155,9 @@ class _ChartViewState extends State<ChartView> {
     }
 
     _gestureHadTwoFingers = true;
-    if (!_panZoomActive) _beginPanZoom(details.localFocalPoint.dx);
+    if (!_panZoomActive) {
+      _beginPanZoom(details.localFocalPoint.dx, details.localFocalPoint.dy);
+    }
 
     final duration = widget.log.duration;
     if (duration <= 0) return;
@@ -146,9 +169,21 @@ class _ChartViewState extends State<ChartView> {
         .clamp(0.0, math.max(0.0, duration - newSpan))
         .toDouble();
 
+    // Vertical pinch zooms the value axis the same way horizontal pinch zooms
+    // the time axis.
+    final newYSpan =
+        (_ySpanAtGesture / details.verticalScale).clamp(0.08, 3.0).toDouble();
+    final fy = _verticalFraction(details.localFocalPoint.dy);
+    var newYTop = _anchorNorm - fy * newYSpan;
+    final minTop = math.min(0.0, 1.0 - newYSpan);
+    final maxTop = math.max(0.0, 1.0 - newYSpan);
+    newYTop = newYTop.clamp(minTop, maxTop).toDouble();
+
     setState(() {
       _start = newStart;
       _end = newStart + newSpan;
+      _yTop = newYTop;
+      _ySpan = newYSpan;
     });
   }
 
@@ -165,6 +200,7 @@ class _ChartViewState extends State<ChartView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               _width = constraints.maxWidth;
+              _chartHeight = constraints.maxHeight;
 
               return Stack(
                 children: [
@@ -177,7 +213,10 @@ class _ChartViewState extends State<ChartView> {
                         widget.onCursorChanged(index);
                       },
                       onDoubleTap: () => setState(_fit),
-                      onScaleStart: _onScaleStart,
+                      onScaleStart: (_) {
+                        _panZoomActive = false;
+                        _gestureHadTwoFingers = false;
+                      },
                       onScaleUpdate: _onScaleUpdate,
                       onScaleEnd: _onScaleEnd,
                       child: CustomPaint(
@@ -187,6 +226,11 @@ class _ChartViewState extends State<ChartView> {
                           cursor: widget.cursor,
                           start: _start,
                           end: _end,
+                          showTags: widget.showTags,
+                          highlighted: widget.highlighted,
+                          yTop: _yTop,
+                          ySpan: _ySpan,
+                          laneMode: widget.laneMode,
                         ),
                         child: widget.selected.isEmpty
                             ? const Center(
@@ -290,6 +334,11 @@ class _ChartPainter extends CustomPainter {
     required this.cursor,
     required this.start,
     required this.end,
+    required this.showTags,
+    required this.highlighted,
+    required this.yTop,
+    required this.ySpan,
+    required this.laneMode,
   });
 
   final VehicleLog log;
@@ -297,6 +346,40 @@ class _ChartPainter extends CustomPainter {
   final int? cursor;
   final double start;
   final double end;
+  final bool showTags;
+  final int? highlighted;
+  final double yTop;
+  final double ySpan;
+  final bool laneMode;
+
+  /// Vertical slot for one trace: the whole plot when overlaying, or its own
+  /// band when stacking.
+  Rect _areaFor(int slot, Rect plot) {
+    if (!laneMode || selected.isEmpty) return plot;
+    final count = selected.length;
+    final height = plot.height / count;
+    final top = plot.top + slot * height;
+    final pad = height >= 60
+        ? 10.0
+        : height >= 40
+            ? 6.0
+            : 3.0;
+    final inset = math.max(2.0, height - pad * 2);
+    return Rect.fromLTRB(plot.left, top + pad, plot.right, top + pad + inset);
+  }
+
+  double _yForValue(LogChannel channel, double value, Rect plot) {
+    final range = channel.max - channel.min;
+    final norm = range <= 0 ? 0.5 : (value - channel.min) / range;
+    final frac = (norm - yTop) / ySpan;
+    return plot.bottom - frac * plot.height;
+  }
+
+  bool _isVisible(LogChannel channel, double value) {
+    final range = channel.max - channel.min;
+    final norm = range <= 0 ? 0.5 : (value - channel.min) / range;
+    return norm >= yTop - 0.02 && norm <= yTop + ySpan + 0.02;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -315,9 +398,11 @@ class _ChartPainter extends CustomPainter {
       ..color = kBorder
       ..strokeWidth = 1;
 
-    for (var i = 0; i <= 4; i++) {
-      final y = plot.top + plot.height * i / 4;
-      canvas.drawLine(Offset(plot.left, y), Offset(plot.right, y), gridPaint);
+    if (!laneMode) {
+      for (var i = 0; i <= 4; i++) {
+        final y = plot.top + plot.height * i / 4;
+        canvas.drawLine(Offset(plot.left, y), Offset(plot.right, y), gridPaint);
+      }
     }
     for (var i = 0; i <= 4; i++) {
       final x = plot.left + plot.width * i / 4;
@@ -331,53 +416,161 @@ class _ChartPainter extends CustomPainter {
     final visible = math.max(1, to - from + 1);
     final step = math.max(1, (visible / (plot.width * 2)).ceil());
 
+    if (laneMode) _paintLaneFrames(canvas, plot);
+
+    // Dimmed traces first so the emphasised one sits on top.
     for (var slot = 0; slot < selected.length; slot++) {
-      final channel = log.channels[selected[slot]];
-      if (!channel.hasData) continue;
-
-      final colour = kTraceColors[slot % kTraceColors.length];
-      final range = channel.max - channel.min;
-
-      final path = Path();
-      var started = false;
-      var lastTime = double.negativeInfinity;
-
-      for (var i = from; i <= to; i += step) {
-        final value = channel.values[i];
-        final t = log.time[i];
-        if (!value.isFinite || !t.isFinite) {
-          started = false;
-          continue;
-        }
-        if (t - lastTime > kGapSeconds) started = false;
-        lastTime = t;
-
-        final x =
-            plot.left + ((t - start) / span).clamp(0.0, 1.0) * plot.width;
-        final normalised =
-            range <= 0 ? 0.5 : ((value - channel.min) / range).clamp(0.0, 1.0);
-        final y = plot.bottom - normalised * plot.height;
-
-        if (started) {
-          path.lineTo(x, y);
-        } else {
-          path.moveTo(x, y);
-          started = true;
-        }
-      }
-
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = colour
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..isAntiAlias = true,
-      );
+      if (highlighted != null && selected[slot] == highlighted) continue;
+      _drawTrace(canvas, plot, span, slot, from, to, step,
+          area: _areaFor(slot, plot),
+          opacity: highlighted == null ? 1.0 : 0.18);
+    }
+    for (var slot = 0; slot < selected.length; slot++) {
+      if (highlighted == null || selected[slot] != highlighted) continue;
+      _drawTrace(canvas, plot, span, slot, from, to, step,
+          area: _areaFor(slot, plot), opacity: 1.0, width: 2.2);
     }
 
     _paintTimeAxis(canvas, plot, span);
     _paintCursor(canvas, plot, span);
+
+    if (showTags) _paintTags(canvas, plot, span);
+  }
+
+  void _paintLaneFrames(Canvas canvas, Rect plot) {
+    final count = selected.length;
+    if (count == 0) return;
+
+    final height = plot.height / count;
+
+    for (var slot = 0; slot < count; slot++) {
+      final top = plot.top + slot * height;
+
+      if (slot > 0) {
+        canvas.drawLine(
+          Offset(plot.left, top),
+          Offset(plot.right, top),
+          Paint()
+            ..color = kBorder
+            ..strokeWidth = 1,
+        );
+      }
+
+      final channel = log.channels[selected[slot]];
+      final colour = kTraceColors[slot % kTraceColors.length];
+      final dim = highlighted != null && selected[slot] != highlighted;
+      final labelColour = dim ? colour.withAlpha(80) : colour;
+
+      _label(
+        canvas,
+        channel.name,
+        Offset(plot.left + 2, top + 4),
+        labelColour,
+        9.5,
+      );
+
+      final range = channel.max - channel.min;
+      if (height >= 44 && range > 0) {
+        final high = channel.min + (yTop + ySpan) * range;
+        final low = channel.min + yTop * range;
+        _labelRight(
+            canvas, formatValue(high), plot.right - 3, top + 4, labelColour);
+        _labelRight(canvas, formatValue(low), plot.right - 3,
+            top + height - 16, labelColour);
+      }
+    }
+  }
+
+  void _label(
+    Canvas canvas,
+    String text,
+    Offset at,
+    Color colour,
+    double size,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(color: colour, fontSize: size),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, at);
+  }
+
+  void _labelRight(
+    Canvas canvas,
+    String text,
+    double right,
+    double top,
+    Color colour,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(color: colour, fontSize: 9),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, Offset(right - painter.width, top));
+  }
+
+  void _drawTrace(
+    Canvas canvas,
+    Rect plot,
+    double span,
+    int slot,
+    int from,
+    int to,
+    int step, {
+    required Rect area,
+    required double opacity,
+    double width = 1.5,
+  }) {
+    final channel = log.channels[selected[slot]];
+    if (!channel.hasData) return;
+
+    final base = kTraceColors[slot % kTraceColors.length];
+    final colour = opacity >= 1
+        ? base
+        : base.withAlpha(((255 * opacity).round()).clamp(0, 255).toInt());
+
+    final path = Path();
+    var started = false;
+    var lastTime = double.negativeInfinity;
+
+    for (var i = from; i <= to; i += step) {
+      final value = channel.values[i];
+      final t = log.time[i];
+      if (!value.isFinite || !t.isFinite) {
+        started = false;
+        continue;
+      }
+      if (t - lastTime > kGapSeconds) started = false;
+      lastTime = t;
+
+      final x = plot.left + ((t - start) / span).clamp(0.0, 1.0) * plot.width;
+      final y = _yForValue(channel, value, area);
+
+      if (started) {
+        path.lineTo(x, y);
+      } else {
+        path.moveTo(x, y);
+        started = true;
+      }
+    }
+
+    canvas.save();
+    canvas.clipRect(area);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = colour
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = width
+        ..isAntiAlias = true,
+    );
+    canvas.restore();
   }
 
   void _paintTimeAxis(Canvas canvas, Rect plot, double span) {
@@ -415,17 +608,19 @@ class _ChartPainter extends CustomPainter {
       if (!channel.hasData) continue;
 
       final value = channel.values[index];
-      if (!value.isFinite) continue;
+      if (!value.isFinite || !_isVisible(channel, value)) continue;
 
-      final range = channel.max - channel.min;
-      final normalised =
-          range <= 0 ? 0.5 : ((value - channel.min) / range).clamp(0.0, 1.0);
-      final y = plot.bottom - normalised * plot.height;
+      final y = _yForValue(channel, value, _areaFor(slot, plot));
+
+      final base = kTraceColors[slot % kTraceColors.length];
+      final dim =
+          highlighted != null && selected[slot] != highlighted;
 
       canvas.drawCircle(
         Offset(x, y),
-        3.4,
-        Paint()..color = kTraceColors[slot % kTraceColors.length],
+        dim ? 2.4 : 3.6,
+        Paint()
+          ..color = dim ? base.withAlpha(70) : base,
       );
     }
 
@@ -443,7 +638,8 @@ class _ChartPainter extends CustomPainter {
 
     const padding = 5.0;
     final width = painter.width + padding * 2;
-    final left = (x - width / 2).clamp(plot.left, plot.right - width).toDouble();
+    final left =
+        (x - width / 2).clamp(plot.left, plot.right - width).toDouble();
     final rect = Rect.fromLTWH(left, plot.top - 18, width, painter.height + 4);
 
     canvas.drawRRect(
@@ -453,12 +649,89 @@ class _ChartPainter extends CustomPainter {
     painter.paint(canvas, Offset(left + padding, plot.top - 16));
   }
 
+  /// Value label attached to each trace at the cursor.
+  void _paintTags(Canvas canvas, Rect plot, double span) {
+    final index = cursor;
+    if (index == null || index < 0 || index >= log.sampleCount) return;
+
+    final t = log.time[index];
+    if (!t.isFinite || t < start || t > end) return;
+
+    final x = plot.left + ((t - start) / span).clamp(0.0, 1.0) * plot.width;
+
+    // Highlighted trace last so its label wins any overlap.
+    for (var pass = 0; pass < 2; pass++) {
+      for (var slot = 0; slot < selected.length; slot++) {
+        final isHighlighted = selected[slot] == highlighted;
+        if ((pass == 0) == isHighlighted) continue;
+
+        final channel = log.channels[selected[slot]];
+        if (!channel.hasData) continue;
+
+        final value = channel.values[index];
+        if (!value.isFinite || !_isVisible(channel, value)) continue;
+
+        final y = _yForValue(channel, value, _areaFor(slot, plot));
+
+        final base = kTraceColors[slot % kTraceColors.length];
+        final dim = highlighted != null && !isHighlighted;
+
+        final painter = TextPainter(
+          text: TextSpan(
+            text: formatValue(value),
+            style: TextStyle(
+              color: dim ? base.withAlpha(90) : base,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        const padH = 4.0;
+        const padV = 2.0;
+        final width = painter.width + padH * 2;
+        final height = painter.height + padV * 2;
+
+        var left = x + 9;
+        if (left + width > plot.right) left = x - 9 - width;
+        left = left
+            .clamp(plot.left, math.max(plot.left, plot.right - width))
+            .toDouble();
+        final area = _areaFor(slot, plot);
+        final top = (y - height / 2)
+            .clamp(area.top, math.max(area.top, area.bottom - height))
+            .toDouble();
+
+        final rect = Rect.fromLTWH(left, top, width, height);
+
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+          Paint()..color = const Color(0xE60B0E13),
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+          Paint()
+            ..color = dim ? base.withAlpha(70) : base
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+        painter.paint(canvas, Offset(left + padH, top + padV));
+      }
+    }
+  }
+
   @override
   bool shouldRepaint(covariant _ChartPainter oldDelegate) {
     return oldDelegate.cursor != cursor ||
         oldDelegate.start != start ||
         oldDelegate.end != end ||
+        oldDelegate.yTop != yTop ||
+        oldDelegate.ySpan != ySpan ||
         oldDelegate.log != log ||
+        oldDelegate.showTags != showTags ||
+        oldDelegate.highlighted != highlighted ||
+        oldDelegate.laneMode != laneMode ||
         !_sameSelection(oldDelegate.selected, selected);
   }
 

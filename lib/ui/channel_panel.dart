@@ -14,6 +14,9 @@ class ChannelPanel extends StatefulWidget {
     required this.cursor,
     required this.onToggle,
     required this.onClose,
+    required this.onIsolate,
+    required this.onClear,
+    required this.highlighted,
   });
 
   final VehicleLog log;
@@ -21,6 +24,9 @@ class ChannelPanel extends StatefulWidget {
   final int? cursor;
   final ValueChanged<int> onToggle;
   final VoidCallback onClose;
+  final ValueChanged<int> onIsolate;
+  final VoidCallback onClear;
+  final int? highlighted;
 
   @override
   State<ChannelPanel> createState() => _ChannelPanelState();
@@ -65,13 +71,18 @@ class _ChannelPanelState extends State<ChannelPanel> {
                     itemCount: matches.length,
                     itemBuilder: (context, position) {
                       final index = matches[position];
+                      final slot = widget.selected.indexOf(index);
                       return _ChannelRow(
                         channel: widget.log.channels[index],
-                        color: _colourFor(index),
+                        color: slot < 0
+                            ? null
+                            : kTraceColors[slot % kTraceColors.length],
                         value: widget.cursor == null
                             ? null
                             : widget.log.channels[index].valueAt(widget.cursor!),
+                        isolated: widget.highlighted == index,
                         onTap: () => widget.onToggle(index),
+                        onLongPress: () => widget.onIsolate(index),
                       );
                     },
                   ),
@@ -83,7 +94,7 @@ class _ChannelPanelState extends State<ChannelPanel> {
 
   Widget _header() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 8, 6),
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 6),
       child: Row(
         children: [
           const Text('CHANNELS', style: kLabelStyle),
@@ -93,21 +104,23 @@ class _ChannelPanelState extends State<ChannelPanel> {
             style: const TextStyle(color: kMuted, fontSize: 11),
           ),
           const Spacer(),
-          if (widget.selected.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: kSurfaceAlt,
-                borderRadius: BorderRadius.circular(4),
+          if (widget.selected.isNotEmpty) ...[
+            TextButton(
+              onPressed: widget.onClear,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                minimumSize: const Size(0, 28),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: Text(
-                '${widget.selected.length} shown',
-                style: const TextStyle(color: kMuted, fontSize: 10),
+              child: const Text(
+                'Clear',
+                style: TextStyle(fontSize: 11, color: kMuted),
               ),
             ),
+          ],
           IconButton(
             onPressed: widget.onClose,
-            icon: const Icon(Icons.chevron_left, size: 18),
+            icon: const Icon(Icons.close, size: 16),
             color: kMuted,
             visualDensity: VisualDensity.compact,
             tooltip: 'Hide panel',
@@ -153,12 +166,6 @@ class _ChannelPanelState extends State<ChannelPanel> {
       ),
     );
   }
-
-  Color? _colourFor(int index) {
-    final slot = widget.selected.indexOf(index);
-    if (slot < 0) return null;
-    return kTraceColors[slot % kTraceColors.length];
-  }
 }
 
 class _ChannelRow extends StatelessWidget {
@@ -166,13 +173,17 @@ class _ChannelRow extends StatelessWidget {
     required this.channel,
     required this.color,
     required this.value,
+    required this.isolated,
     required this.onTap,
+    required this.onLongPress,
   });
 
   final LogChannel channel;
   final Color? color;
   final double? value;
+  final bool isolated;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -180,10 +191,18 @@ class _ChannelRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        color: active ? kSurfaceAlt : null,
+        decoration: BoxDecoration(
+          color: isolated
+              ? const Color(0xFF223047)
+              : (active ? kSurfaceAlt : null),
+          border: isolated
+              ? Border(left: BorderSide(color: color ?? kAccent, width: 2))
+              : null,
+        ),
         child: Row(
           children: [
             Container(
@@ -206,7 +225,11 @@ class _ChannelRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: active ? Colors.white : Colors.white70,
+                      color: isolated
+                          ? Colors.white
+                          : (active ? Colors.white : Colors.white70),
+                      fontWeight:
+                          isolated ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                   Text(
@@ -217,6 +240,11 @@ class _ChannelRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
+            if (isolated)
+              const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: Icon(Icons.center_focus_strong, size: 12, color: kAccent),
+              ),
             Text(
               _readout(),
               style: TextStyle(
