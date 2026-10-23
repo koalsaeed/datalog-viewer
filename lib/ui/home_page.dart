@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
@@ -5,9 +6,11 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/vehicle_log.dart';
 import '../parsers/csv_parser.dart';
+import '../services/log_loader.dart';
 import '../util/units.dart';
 import 'channel_panel.dart';
 import 'chart_view.dart';
+import 'landing_view.dart';
 import 'theme.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,51 +22,83 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   VehicleLog? _log;
+  bool _busy = false;
   String? _error;
+
   final List<int> _selected = <int>[];
   int? _cursor;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadSample();
+  /// `null` means "decide by screen width".
+  bool? _panelOverride;
+  bool _isNarrow = false;
+
+  Future<void> _openLog() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      final log = await LogLoader.pickLog();
+      if (log == null) {
+        setState(() => _busy = false);
+        return;
+      }
+      _applyLog(log);
+    } catch (error) {
+      setState(() {
+        _busy = false;
+        _error = error.toString();
+      });
+    }
   }
 
   Future<void> _loadSample() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
     try {
       final text = await rootBundle.loadString('assets/sample.csv');
-      final log = parseCsvLog(text, fileName: 'datalog3.csv');
-
-      const wanted = <String>[
-        'rpm',
-        'throttle angle Actual',
-        'lambse bank 1',
-        'vehicle speed mph',
-      ];
-
-      final picked = <int>[];
-      for (final name in wanted) {
-        final index = log.channels.indexWhere(
-          (channel) => channel.name.toLowerCase() == name.toLowerCase(),
-        );
-        if (index >= 0 && !picked.contains(index)) picked.add(index);
-      }
-      if (picked.isEmpty) {
-        for (var i = 0; i < log.channels.length && picked.length < 3; i++) {
-          if (log.channels[i].hasData) picked.add(i);
-        }
-      }
-
-      setState(() {
-        _log = log;
-        _selected
-          ..clear()
-          ..addAll(picked);
-        _cursor = log.sampleCount ~/ 2;
-      });
+      _applyLog(parseCsvLog(text, fileName: 'datalog3.csv'));
     } catch (error) {
-      setState(() => _error = error.toString());
+      setState(() {
+        _busy = false;
+        _error = error.toString();
+      });
     }
+  }
+
+  void _applyLog(VehicleLog log) {
+    const wanted = <String>[
+      'rpm',
+      'throttle angle Actual',
+      'lambse bank 1',
+      'vehicle speed mph',
+    ];
+
+    final picked = <int>[];
+    for (final name in wanted) {
+      final index = log.channels.indexWhere(
+        (channel) => channel.name.toLowerCase() == name.toLowerCase(),
+      );
+      if (index >= 0 && !picked.contains(index)) picked.add(index);
+    }
+    if (picked.isEmpty) {
+      for (var i = 0; i < log.channels.length && picked.length < 3; i++) {
+        if (log.channels[i].hasData) picked.add(i);
+      }
+    }
+
+    setState(() {
+      _log = log;
+      _busy = false;
+      _selected
+        ..clear()
+        ..addAll(picked);
+      _cursor = log.sampleCount > 0 ? log.sampleCount ~/ 2 : null;
+    });
   }
 
   void _toggleChannel(int index) {
@@ -72,9 +107,7 @@ class _HomePageState extends State<HomePage> {
         _selected.remove(index);
         return;
       }
-      if (_selected.length >= kTraceColors.length) {
-        _selected.removeAt(0);
-      }
+      if (_selected.length >= kTraceColors.length) _selected.removeAt(0);
       _selected.add(index);
     });
   }
@@ -85,98 +118,176 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            if (constraints.maxWidth < 620) {
-              return const _Message(
-                icon: Icons.screen_rotation,
-                title: 'Rotate your phone',
-                detail: 'This viewer is built for landscape.',
+            _isNarrow = constraints.maxWidth < 760;
+
+            final log = _log;
+            if (log == null) {
+              return LandingView(
+                busy: _busy,
+                error: _error,
+                onOpen: _openLog,
+                onSample: _loadSample,
               );
             }
-            return _buildBody(constraints.maxWidth);
+
+            final panelVisible = _panelOverride ?? !_isNarrow;
+
+            return Column(
+              children: [
+                _TopBar(
+                  log: log,
+                  cursor: _cursor,
+                  narrow: _isNarrow,
+                  panelVisible: panelVisible,
+                  busy: _busy,
+                  onOpen: _openLog,
+                  onTogglePanel: () =>
+                      setState(() => _panelOverride = !panelVisible),
+                ),
+                const Divider(height: 1, color: kBorder),
+                Expanded(child: _viewer(log, panelVisible)),
+              ],
+            );
           },
         ),
       ),
     );
   }
 
-  Widget _buildBody(double width) {
-    if (_error != null) {
-      return _Message(
-        icon: Icons.error_outline,
-        title: 'Could not open the log',
-        detail: _error!,
+  Widget _viewer(VehicleLog log, bool panelVisible) {
+    final panel = ChannelPanel(
+      log: log,
+      selected: _selected,
+      cursor: _cursor,
+      onToggle: _toggleChannel,
+      onClose: () => setState(() => _panelOverride = false),
+    );
+
+    final chart = ChartView(
+      log: log,
+      selected: _selected,
+      cursor: _cursor,
+      onCursorChanged: (index) => setState(() => _cursor = index),
+    );
+
+    if (!_isNarrow) {
+      return Row(
+        children: [
+          if (panelVisible) ...[
+            SizedBox(width: 300, child: panel),
+            const VerticalDivider(width: 1, color: kBorder),
+          ],
+          Expanded(child: chart),
+        ],
       );
     }
 
-    final log = _log;
-    if (log == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final overlayWidth =
+        math.min(320.0, MediaQuery.of(context).size.width * 0.86);
 
-    return Column(
+    return Stack(
       children: [
-        _TopBar(log: log, cursor: _cursor),
-        const Divider(height: 1, color: kBorder),
-        Expanded(
-          child: Row(
-            children: [
-              SizedBox(
-                width: width < 900 ? 248 : 320,
-                child: ChannelPanel(
-                  log: log,
-                  selected: _selected,
-                  cursor: _cursor,
-                  onToggle: _toggleChannel,
-                ),
-              ),
-              const VerticalDivider(width: 1, color: kBorder),
-              Expanded(
-                child: ChartView(
-                  log: log,
-                  selected: _selected,
-                  cursor: _cursor,
-                  onCursorChanged: (index) => setState(() => _cursor = index),
-                ),
-              ),
-            ],
+        Positioned.fill(child: chart),
+        if (panelVisible) ...[
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => setState(() => _panelOverride = false),
+              child: Container(color: const Color(0x99000000)),
+            ),
           ),
-        ),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: overlayWidth,
+            child: Material(
+              color: kSurface,
+              elevation: 12,
+              child: panel,
+            ),
+          ),
+        ],
       ],
     );
   }
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.log, required this.cursor});
+  const _TopBar({
+    required this.log,
+    required this.cursor,
+    required this.narrow,
+    required this.panelVisible,
+    required this.busy,
+    required this.onOpen,
+    required this.onTogglePanel,
+  });
 
   final VehicleLog log;
   final int? cursor;
+  final bool narrow;
+  final bool panelVisible;
+  final bool busy;
+  final VoidCallback onOpen;
+  final VoidCallback onTogglePanel;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return SizedBox(
+      height: 54,
       child: Row(
         children: [
-          const Icon(Icons.show_chart, size: 18, color: Color(0xFF4EA1FF)),
-          const SizedBox(width: 10),
-          Text(
-            log.fileName,
-            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: busy ? null : onOpen,
+            icon: const Icon(Icons.folder_open, size: 18),
+            color: kMuted,
+            tooltip: 'Open another log',
+            visualDensity: VisualDensity.compact,
           ),
-          const SizedBox(width: 18),
-          _Pill(text: '${log.channels.length} channels'),
-          _Pill(text: '${log.sampleCount} samples'),
-          _Pill(text: formatClock(log.duration)),
+          IconButton(
+            onPressed: onTogglePanel,
+            icon: Icon(
+              narrow
+                  ? Icons.view_sidebar
+                  : (panelVisible
+                      ? Icons.chevron_left
+                      : Icons.chevron_right),
+              size: 18,
+            ),
+            color: kMuted,
+            tooltip: panelVisible ? 'Hide channels' : 'Show channels',
+            visualDensity: VisualDensity.compact,
+          ),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text(
+              log.fileName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          if (!narrow) ...[
+            _Pill(text: '${log.channels.length} ch'),
+            _Pill(text: '${log.sampleCount} samples'),
+            _Pill(text: formatClock(log.duration)),
+          ],
           const Spacer(),
           if (cursor != null)
-            Text(
-              't = ${formatClock(log.time[cursor!])}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: kMuted,
-                fontFeatures: [FontFeature.tabularFigures()],
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                't = ${formatClock(log.time[cursor!])}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: kMuted,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
               ),
             ),
         ],
@@ -196,48 +307,10 @@ class _Pill extends StatelessWidget {
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: kSurfaceSelected,
+        color: kSurfaceAlt,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(text, style: const TextStyle(fontSize: 11, color: kMuted)),
-    );
-  }
-}
-
-class _Message extends StatelessWidget {
-  const _Message({
-    required this.icon,
-    required this.title,
-    required this.detail,
-  });
-
-  final IconData icon;
-  final String title;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 40, color: kMuted),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              detail,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: kMuted),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

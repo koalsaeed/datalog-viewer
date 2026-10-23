@@ -6,70 +6,156 @@ import '../models/vehicle_log.dart';
 import '../util/units.dart';
 import 'theme.dart';
 
-class ChannelPanel extends StatelessWidget {
+class ChannelPanel extends StatefulWidget {
   const ChannelPanel({
     super.key,
     required this.log,
     required this.selected,
     required this.cursor,
     required this.onToggle,
+    required this.onClose,
   });
 
   final VehicleLog log;
   final List<int> selected;
   final int? cursor;
   final ValueChanged<int> onToggle;
+  final VoidCallback onClose;
+
+  @override
+  State<ChannelPanel> createState() => _ChannelPanelState();
+}
+
+class _ChannelPanelState extends State<ChannelPanel> {
+  final TextEditingController _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final query = _search.text.trim().toLowerCase();
+    final matches = <int>[];
+    for (var i = 0; i < widget.log.channels.length; i++) {
+      final channel = widget.log.channels[i];
+      if (query.isEmpty || channel.name.toLowerCase().contains(query)) {
+        matches.add(i);
+      }
+    }
+
     return Container(
       color: kSurface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Row(
-              children: [
-                const Text(
-                  'CHANNELS',
-                  style: TextStyle(
-                    color: kMuted,
-                    fontSize: 10,
-                    letterSpacing: 1.2,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${log.channels.length}',
-                  style: const TextStyle(color: kMuted, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
+          _header(),
+          _searchField(),
           Expanded(
-            child: ListView.builder(
-              itemCount: log.channels.length,
-              itemBuilder: (context, index) {
-                return _ChannelRow(
-                  channel: log.channels[index],
-                  color: _colorFor(index),
-                  value: cursor == null
-                      ? null
-                      : log.channels[index].valueAt(cursor!),
-                  onTap: () => onToggle(index),
-                );
-              },
-            ),
+            child: matches.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No channel matches',
+                      style: TextStyle(color: kMuted, fontSize: 12),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: matches.length,
+                    itemBuilder: (context, position) {
+                      final index = matches[position];
+                      return _ChannelRow(
+                        channel: widget.log.channels[index],
+                        color: _colourFor(index),
+                        value: widget.cursor == null
+                            ? null
+                            : widget.log.channels[index].valueAt(widget.cursor!),
+                        onTap: () => widget.onToggle(index),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Color? _colorFor(int index) {
-    final slot = selected.indexOf(index);
+  Widget _header() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 6),
+      child: Row(
+        children: [
+          const Text('CHANNELS', style: kLabelStyle),
+          const SizedBox(width: 8),
+          Text(
+            '${widget.log.channels.length}',
+            style: const TextStyle(color: kMuted, fontSize: 11),
+          ),
+          const Spacer(),
+          if (widget.selected.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: kSurfaceAlt,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${widget.selected.length} shown',
+                style: const TextStyle(color: kMuted, fontSize: 10),
+              ),
+            ),
+          IconButton(
+            onPressed: widget.onClose,
+            icon: const Icon(Icons.chevron_left, size: 18),
+            color: kMuted,
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Hide panel',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: TextField(
+        controller: _search,
+        onChanged: (_) => setState(() {}),
+        style: const TextStyle(fontSize: 12.5, color: Colors.white),
+        cursorColor: kAccent,
+        decoration: InputDecoration(
+          isDense: true,
+          filled: true,
+          fillColor: kSurfaceAlt,
+          hintText: 'Search channels',
+          hintStyle: const TextStyle(color: kMuted, fontSize: 12.5),
+          prefixIcon: const Icon(Icons.search, size: 16, color: kMuted),
+          prefixIconConstraints:
+              const BoxConstraints(minWidth: 34, minHeight: 34),
+          suffixIcon: _search.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close, size: 14, color: kMuted),
+                  onPressed: () {
+                    _search.clear();
+                    setState(() {});
+                  },
+                  visualDensity: VisualDensity.compact,
+                ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 9),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color? _colourFor(int index) {
+    final slot = widget.selected.indexOf(index);
     if (slot < 0) return null;
     return kTraceColors[slot % kTraceColors.length];
   }
@@ -96,8 +182,8 @@ class _ChannelRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        color: active ? kSurfaceSelected : null,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        color: active ? kSurfaceAlt : null,
         child: Row(
           children: [
             Container(
