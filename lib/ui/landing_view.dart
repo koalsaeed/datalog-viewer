@@ -109,7 +109,7 @@ class LandingView extends StatelessWidget {
               ],
               const SizedBox(height: 26),
               const Text(
-                'CSV · TSV · TXT',
+                'CSV · TSV · MSL · VBO · MLG',
                 style: TextStyle(
                   fontSize: 10,
                   letterSpacing: 2,

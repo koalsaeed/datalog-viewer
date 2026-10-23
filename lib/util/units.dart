@@ -20,9 +20,12 @@ String inferUnit(String name) {
   if (n.contains('lambse') || n.contains('lambda')) return 'λ';
   if (n.endsWith(' f') || n.contains('temp f')) return '°F';
   if (n.endsWith(' c') || n.contains('temp c')) return '°C';
-  if (n.contains('advance') || n.contains('timing')) return '°';
-  if (n.contains('load')) return 'g/cyl';
-  if (n.contains('%') || n.contains('percent')) return '%';
+  if (n.contains('advance') || n.contains('timing') || n.contains('adv')) {
+    return '°';
+  }
+  if (n.contains('%') || n.contains('percent') || n.contains('_pct')) {
+    return '%';
+  }
 
   return '';
 }

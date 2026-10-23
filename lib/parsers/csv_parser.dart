@@ -1,16 +1,8 @@
 import 'dart:typed_data';
 
+import '../formats/log_error.dart';
 import '../models/vehicle_log.dart';
 import '../util/units.dart';
-
-class LogParseException implements Exception {
-  LogParseException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
 
 /// Parses SCT LiveLink II style CSV datalogs.
 ///
@@ -46,7 +38,7 @@ VehicleLog parseCsvLog(String content, {String fileName = 'log.csv'}) {
     throw LogParseException('Only one column detected — this is not a datalog.');
   }
 
-  var timeColumn = names.indexWhere((n) => n.toLowerCase().contains('time'));
+  var timeColumn = names.indexWhere(_looksLikeTime);
   if (timeColumn < 0) timeColumn = 0;
 
   // Read every row first so malformed lines are dropped cleanly instead of
@@ -126,6 +118,16 @@ VehicleLog parseCsvLog(String content, {String fileName = 'log.csv'}) {
     startTime: start,
     sampleCount: sampleCount,
   );
+}
+
+/// Recognises the time axis under the names different loggers use.
+///
+/// SCT writes `Time (sec)`; other tools write `ET` (elapsed time) or
+/// `Timestamp`. Falling back to column 0 by luck is not good enough.
+bool _looksLikeTime(String name) {
+  final n = name.toLowerCase().trim();
+  if (n == 'et' || n == 't' || n == 'time') return true;
+  return n.contains('time') || n.contains('elapsed');
 }
 
 String _detectDelimiter(String headerLine) {

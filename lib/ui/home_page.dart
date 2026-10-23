@@ -34,8 +34,10 @@ class _HomePageState extends State<HomePage> {
   bool? _panelOverride;
   PanelDock? _dockOverride;
   bool _showStats = false;
+  StatsDock _statsDock = StatsDock.bottom;
   bool _showTags = true;
   bool _lanes = true;
+  bool _cursorLocked = false;
   bool _focus = false;
   bool _isNarrow = false;
 
@@ -170,6 +172,7 @@ class _HomePageState extends State<HomePage> {
                   showStats: _showStats,
                   showTags: _showTags,
                   lanes: _lanes,
+                  statsDock: _statsDock,
                   busy: _busy,
                   onOpen: _openLog,
                   onTogglePanel: () =>
@@ -182,6 +185,13 @@ class _HomePageState extends State<HomePage> {
                       setState(() => _showStats = !_showStats),
                   onToggleTags: () => setState(() => _showTags = !_showTags),
                   onToggleLanes: () => setState(() => _lanes = !_lanes),
+                  onCycleStatsDock: () => setState(() {
+                    _statsDock = switch (_statsDock) {
+                      StatsDock.bottom => StatsDock.left,
+                      StatsDock.left => StatsDock.right,
+                      StatsDock.right => StatsDock.bottom,
+                    };
+                  }),
                   onToggleFocus: () => setState(() => _focus = true),
                 ),
                 const Divider(height: 1, color: kBorder),
@@ -203,9 +213,12 @@ class _HomePageState extends State<HomePage> {
       cursor: _cursor,
       onCursorChanged: (index) => setState(() => _cursor = index),
       showStats: _showStats,
+      statsDock: _statsDock,
       showTags: _showTags,
       highlighted: _isolated,
       laneMode: _lanes,
+      cursorLocked: _cursorLocked,
+      onToggleLock: () => setState(() => _cursorLocked = !_cursorLocked),
     );
   }
 
@@ -397,6 +410,7 @@ class _TopBar extends StatelessWidget {
     required this.showStats,
     required this.showTags,
     required this.lanes,
+    required this.statsDock,
     required this.busy,
     required this.onOpen,
     required this.onTogglePanel,
@@ -405,6 +419,7 @@ class _TopBar extends StatelessWidget {
     required this.onToggleTags,
     required this.onToggleLanes,
     required this.onToggleFocus,
+    required this.onCycleStatsDock,
   });
 
   final VehicleLog log;
@@ -415,6 +430,7 @@ class _TopBar extends StatelessWidget {
   final bool showStats;
   final bool showTags;
   final bool lanes;
+  final StatsDock statsDock;
   final bool busy;
   final VoidCallback onOpen;
   final VoidCallback onTogglePanel;
@@ -423,6 +439,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onToggleTags;
   final VoidCallback onToggleLanes;
   final VoidCallback onToggleFocus;
+  final VoidCallback onCycleStatsDock;
 
   @override
   Widget build(BuildContext context) {
@@ -486,6 +503,19 @@ class _TopBar extends StatelessWidget {
             onToggleTags,
             active: showTags,
           ),
+          if (showStats)
+            _icon(
+              statsDock == StatsDock.bottom
+                  ? Icons.view_agenda
+                  : Icons.view_sidebar,
+              switch (statsDock) {
+                StatsDock.bottom => 'Move values to the left',
+                StatsDock.left => 'Move values to the right',
+                StatsDock.right => 'Move values below the chart',
+              },
+              onCycleStatsDock,
+              active: statsDock != StatsDock.bottom,
+            ),
           _icon(
             Icons.straighten,
             showStats ? 'Hide min / max' : 'Show min / max',

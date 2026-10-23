@@ -5,34 +5,91 @@ import 'package:flutter/material.dart';
 import '../models/vehicle_log.dart';
 import 'theme.dart';
 
-/// Full-length overview strip with the current viewport highlighted.
+/// Full-length overview strip that doubles as a scrollbar.
 ///
-/// Tap or drag anywhere on it to centre the chart there.
-class Minimap extends StatelessWidget {
+/// Dragging it pans the chart with one finger. Pressing inside the highlighted
+/// window grabs it exactly where you touched; pressing outside centres the
+/// window on your finger first, so a tap never jumps wildly.
+class Minimap extends StatefulWidget {
   const Minimap({
     super.key,
     required this.log,
     required this.selected,
     required this.start,
     required this.end,
-    required this.onSeek,
+    required this.onSeekTo,
+    required this.cursorTime,
+    required this.locked,
+    required this.onCursorTime,
   });
 
   final VehicleLog log;
   final List<int> selected;
   final double start;
   final double end;
-  final ValueChanged<double> onSeek;
+
+  /// Called with the requested viewport start time (already offset-adjusted).
+  final ValueChanged<double> onSeekTo;
+
+  /// Position of the time cursor, in seconds, or null when there is none.
+  final double? cursorTime;
+
+  /// When locked, dragging pans the view instead of moving the cursor.
+  final bool locked;
+
+  final ValueChanged<double> onCursorTime;
+
+  @override
+  State<Minimap> createState() => _MinimapState();
+}
+
+class _MinimapState extends State<Minimap> {
+  double _grab = 0;
+
+  double get _span => widget.end - widget.start;
 
   int get _referenceChannel {
-    if (selected.isNotEmpty) return selected.first;
-    final rpm = log.channels
+    if (widget.selected.isNotEmpty) return widget.selected.first;
+    final rpm = widget.log.channels
         .indexWhere((channel) => channel.name.toLowerCase().contains('rpm'));
     if (rpm >= 0) return rpm;
-    for (var i = 0; i < log.channels.length; i++) {
-      if (log.channels[i].hasData) return i;
+    for (var i = 0; i < widget.log.channels.length; i++) {
+      if (widget.log.channels[i].hasData) return i;
     }
     return 0;
+  }
+
+  void _begin(Offset local, double width) {
+    final duration = widget.log.duration;
+    if (duration <= 0 || width <= 0) return;
+
+    final fraction = (local.dx / width).clamp(0.0, 1.0).toDouble();
+    final t = fraction * duration;
+
+    if (t < widget.start || t > widget.end) {
+      // Outside the window: centre it under the finger.
+      _grab = _span / 2;
+    } else {
+      _grab = t - widget.start;
+    }
+    _emit(t);
+  }
+
+  void _update(Offset local, double width) {
+    final duration = widget.log.duration;
+    if (duration <= 0 || width <= 0) return;
+
+    final fraction = (local.dx / width).clamp(0.0, 1.0).toDouble();
+    _emit(fraction * duration);
+  }
+
+  void _emit(double t) => widget.onSeekTo(t - _grab);
+
+  double? _timeAt(double dx, double width) {
+    final duration = widget.log.duration;
+    if (duration <= 0 || width <= 0) return null;
+    final fraction = (dx / width).clamp(0.0, 1.0).toDouble();
+    return fraction * duration;
   }
 
   @override
@@ -40,15 +97,34 @@ class Minimap extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        void seek(Offset local) {
-          if (width <= 0) return;
-          onSeek((local.dx / width).clamp(0.0, 1.0).toDouble());
-        }
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (details) => seek(details.localPosition),
-          onHorizontalDragUpdate: (details) => seek(details.localPosition),
+          onTapUp: (details) {
+            final t = _timeAt(details.localPosition.dx, width);
+            if (t == null) return;
+            if (widget.locked) {
+              widget.onSeekTo(t - _span / 2);
+            } else {
+              widget.onCursorTime(t);
+            }
+          },
+          onHorizontalDragStart: (details) {
+            if (widget.locked) {
+              _begin(details.localPosition, width);
+            } else {
+              final t = _timeAt(details.localPosition.dx, width);
+              if (t != null) widget.onCursorTime(t);
+            }
+          },
+          onHorizontalDragUpdate: (details) {
+            if (widget.locked) {
+              _update(details.localPosition, width);
+            } else {
+              final t = _timeAt(details.localPosition.dx, width);
+              if (t != null) widget.onCursorTime(t);
+            }
+          },
           child: Container(
             height: 52,
             decoration: const BoxDecoration(
@@ -57,10 +133,11 @@ class Minimap extends StatelessWidget {
             ),
             child: CustomPaint(
               painter: _MinimapPainter(
-                log: log,
+                log: widget.log,
                 channelIndex: _referenceChannel,
-                start: start,
-                end: end,
+                start: widget.start,
+                end: widget.end,
+                cursorTime: widget.cursorTime,
               ),
             ),
           ),
@@ -76,12 +153,14 @@ class _MinimapPainter extends CustomPainter {
     required this.channelIndex,
     required this.start,
     required this.end,
+    required this.cursorTime,
   });
 
   final VehicleLog log;
   final int channelIndex;
   final double start;
   final double end;
+  final double? cursorTime;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -116,9 +195,15 @@ class _MinimapPainter extends CustomPainter {
             range <= 0 ? 0.5 : ((low - channel.min) / range).clamp(0.0, 1.0);
         final normalisedHigh =
             range <= 0 ? 0.5 : ((high - channel.min) / range).clamp(0.0, 1.0);
-        final y1 = size.height - 4 - normalisedHigh.toDouble() * (size.height - 8);
-        final y2 = size.height - 4 - normalisedLow.toDouble() * (size.height - 8);
-        canvas.drawLine(Offset(x.toDouble(), y1), Offset(x.toDouble(), y2), paint);
+        final y1 =
+            size.height - 4 - normalisedHigh.toDouble() * (size.height - 8);
+        final y2 =
+            size.height - 4 - normalisedLow.toDouble() * (size.height - 8);
+        canvas.drawLine(
+          Offset(x.toDouble(), y1),
+          Offset(x.toDouble(), y2),
+          paint,
+        );
       }
     }
 
@@ -132,13 +217,42 @@ class _MinimapPainter extends CustomPainter {
       Rect.fromLTRB(left, 0, right, size.height),
       Paint()..color = const Color(0x1A4EA1FF),
     );
-    canvas.drawRect(
-      Rect.fromLTRB(left + 0.5, 0.5, right - 0.5, size.height - 0.5),
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(left + 1, 1, math.max(left + 2, right - 1), size.height - 1),
+        const Radius.circular(3),
+      ),
       Paint()
         ..color = const Color(0xCC4EA1FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
+        ..strokeWidth = 1.5,
     );
+
+    final cursor = cursorTime;
+    if (cursor != null && cursor.isFinite) {
+      final cx = (cursor / duration).clamp(0.0, 1.0).toDouble() * size.width;
+      canvas.drawLine(
+        Offset(cx, 0),
+        Offset(cx, size.height),
+        Paint()
+          ..color = const Color(0xFFFFFFFF)
+          ..strokeWidth = 1.5,
+      );
+      final thumbY = size.height / 2;
+      canvas.drawCircle(
+        Offset(cx, thumbY),
+        5.5,
+        Paint()..color = const Color(0xFFFFFFFF),
+      );
+      canvas.drawCircle(
+        Offset(cx, thumbY),
+        5.5,
+        Paint()
+          ..color = const Color(0xFF0B0E13)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
   }
 
   @override
@@ -146,6 +260,7 @@ class _MinimapPainter extends CustomPainter {
     return oldDelegate.start != start ||
         oldDelegate.end != end ||
         oldDelegate.log != log ||
+        oldDelegate.cursorTime != cursorTime ||
         oldDelegate.channelIndex != channelIndex;
   }
 }

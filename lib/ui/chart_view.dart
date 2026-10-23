@@ -17,6 +17,9 @@ const double kPadBottom = 26;
 /// straight line across missing samples.
 const double kGapSeconds = 0.10;
 
+/// Where the min / max readout lives relative to the chart.
+enum StatsDock { bottom, left, right }
+
 class ChartView extends StatefulWidget {
   const ChartView({
     super.key,
@@ -28,6 +31,9 @@ class ChartView extends StatefulWidget {
     this.showTags = true,
     this.highlighted,
     this.laneMode = false,
+    this.statsDock = StatsDock.bottom,
+    this.cursorLocked = false,
+    this.onToggleLock,
   });
 
   final VehicleLog log;
@@ -42,6 +48,13 @@ class ChartView extends StatefulWidget {
 
   /// When true each channel gets its own band with a real value scale.
   final bool laneMode;
+
+  final StatsDock statsDock;
+
+  /// Freezes the cursor: dragging pans the view instead of scrubbing.
+  final bool cursorLocked;
+
+  final VoidCallback? onToggleLock;
 
   @override
   State<ChartView> createState() => _ChartViewState();
@@ -63,6 +76,7 @@ class _ChartViewState extends State<ChartView> {
   double _anchorNorm = 0;
   bool _panZoomActive = false;
   bool _gestureHadTwoFingers = false;
+  double? _lastPanX;
 
   @override
   void initState() {
@@ -116,14 +130,13 @@ class _ChartViewState extends State<ChartView> {
     });
   }
 
-  void _seekTo(double fraction) {
+  void _seekToStart(double requested) {
     final duration = widget.log.duration;
     if (duration <= 0) return;
 
     final span = _end - _start;
-    final newStart = (fraction * duration - span / 2)
-        .clamp(0.0, math.max(0.0, duration - span))
-        .toDouble();
+    final newStart =
+        requested.clamp(0.0, math.max(0.0, duration - span)).toDouble();
 
     setState(() {
       _start = newStart;
@@ -145,9 +158,14 @@ class _ChartViewState extends State<ChartView> {
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
-    // One finger scrubs the cursor; the chart itself never moves.
+    // One finger scrubs the cursor unless the cursor is locked, in which case
+    // it pans the view like a scroll.
     if (details.pointerCount < 2) {
       if (_gestureHadTwoFingers) return;
+      if (widget.cursorLocked) {
+        _panWithFinger(details.localFocalPoint.dx);
+        return;
+      }
       final index =
           widget.log.nearestIndex(_timeAt(details.localFocalPoint.dx));
       if (index != widget.cursor) widget.onCursorChanged(index);
@@ -155,6 +173,7 @@ class _ChartViewState extends State<ChartView> {
     }
 
     _gestureHadTwoFingers = true;
+    _lastPanX = null;
     if (!_panZoomActive) {
       _beginPanZoom(details.localFocalPoint.dx, details.localFocalPoint.dy);
     }
@@ -190,75 +209,146 @@ class _ChartViewState extends State<ChartView> {
   void _onScaleEnd(ScaleEndDetails details) {
     _panZoomActive = false;
     _gestureHadTwoFingers = false;
+    _lastPanX = null;
+  }
+
+  void _panWithFinger(double x) {
+    final duration = widget.log.duration;
+    if (duration <= 0) return;
+
+    final plotWidth = _width - kPadLeft - kPadRight;
+    if (plotWidth <= 0) return;
+
+    final previous = _lastPanX;
+    _lastPanX = x;
+    if (previous == null) return;
+
+    final span = _end - _start;
+    final seconds = -(x - previous) / plotWidth * span;
+    final newStart = (_start + seconds)
+        .clamp(0.0, math.max(0.0, duration - span))
+        .toDouble();
+
+    if (newStart == _start) return;
+    setState(() {
+      _start = newStart;
+      _end = newStart + span;
+    });
+  }
+
+  /// Moves the cursor from the minimap and scrolls the view along with it.
+  void _setCursorFromTime(double t) {
+    final index = widget.log.nearestIndex(t);
+    if (index != widget.cursor) widget.onCursorChanged(index);
+
+    final duration = widget.log.duration;
+    if (duration <= 0) return;
+
+    final span = _end - _start;
+    var newStart = _start;
+    if (t > _end) {
+      newStart = t - span;
+    } else if (t < _start) {
+      newStart = t;
+    }
+    newStart =
+        newStart.clamp(0.0, math.max(0.0, duration - span)).toDouble();
+
+    if (newStart == _start) return;
+    setState(() {
+      _start = newStart;
+      _end = newStart + span;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              _width = constraints.maxWidth;
-              _chartHeight = constraints.maxHeight;
+    final chart = Expanded(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          _width = constraints.maxWidth;
+          _chartHeight = constraints.maxHeight;
 
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTapUp: (details) {
-                        final index = widget.log
-                            .nearestIndex(_timeAt(details.localPosition.dx));
-                        widget.onCursorChanged(index);
-                      },
-                      onDoubleTap: () => setState(_fit),
-                      onScaleStart: (_) {
-                        _panZoomActive = false;
-                        _gestureHadTwoFingers = false;
-                      },
-                      onScaleUpdate: _onScaleUpdate,
-                      onScaleEnd: _onScaleEnd,
-                      child: CustomPaint(
-                        painter: _ChartPainter(
-                          log: widget.log,
-                          selected: widget.selected,
-                          cursor: widget.cursor,
-                          start: _start,
-                          end: _end,
-                          showTags: widget.showTags,
-                          highlighted: widget.highlighted,
-                          yTop: _yTop,
-                          ySpan: _ySpan,
-                          laneMode: widget.laneMode,
-                        ),
-                        child: widget.selected.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Pick a channel on the left',
-                                  style:
-                                      TextStyle(color: kMuted, fontSize: 13),
-                                ),
-                              )
-                            : const SizedBox.expand(),
-                      ),
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (details) {
+                    if (widget.cursorLocked) return;
+                    final index = widget.log
+                        .nearestIndex(_timeAt(details.localPosition.dx));
+                    widget.onCursorChanged(index);
+                  },
+                  onDoubleTap: () => setState(_fit),
+                  onScaleStart: (_) {
+                    _panZoomActive = false;
+                    _gestureHadTwoFingers = false;
+                    _lastPanX = null;
+                  },
+                  onScaleUpdate: _onScaleUpdate,
+                  onScaleEnd: _onScaleEnd,
+                  child: CustomPaint(
+                    painter: _ChartPainter(
+                      log: widget.log,
+                      selected: widget.selected,
+                      cursor: widget.cursor,
+                      start: _start,
+                      end: _end,
+                      showTags: widget.showTags,
+                      highlighted: widget.highlighted,
+                      yTop: _yTop,
+                      ySpan: _ySpan,
+                      laneMode: widget.laneMode,
                     ),
+                    child: widget.selected.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Pick a channel on the left',
+                              style: TextStyle(color: kMuted, fontSize: 13),
+                            ),
+                          )
+                        : const SizedBox.expand(),
                   ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: _ZoomControls(
-                      onZoomIn: () => _zoomBy(0.5),
-                      onZoomOut: () => _zoomBy(2),
-                      onFit: () => setState(_fit),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        if (widget.showStats)
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: _ZoomControls(
+                  locked: widget.cursorLocked,
+                  onToggleLock: widget.onToggleLock,
+                  onZoomIn: () => _zoomBy(0.5),
+                  onZoomOut: () => _zoomBy(2),
+                  onFit: () => setState(_fit),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    final minimap = Minimap(
+      log: widget.log,
+      selected: widget.selected,
+      start: _start,
+      end: _end,
+      onSeekTo: _seekToStart,
+      cursorTime:
+          widget.cursor == null ? null : widget.log.time[widget.cursor!],
+      locked: widget.cursorLocked,
+      onCursorTime: _setCursorFromTime,
+    );
+
+    if (!widget.showStats) {
+      return Column(children: [chart, minimap]);
+    }
+
+    if (widget.statsDock == StatsDock.bottom) {
+      return Column(
+        children: [
+          chart,
           StatsBar(
             log: widget.log,
             selected: widget.selected,
@@ -266,13 +356,26 @@ class _ChartViewState extends State<ChartView> {
             end: _end,
             cursor: widget.cursor,
           ),
-        Minimap(
-          log: widget.log,
-          selected: widget.selected,
-          start: _start,
-          end: _end,
-          onSeek: _seekTo,
-        ),
+          minimap,
+        ],
+      );
+    }
+
+    final side = StatsSide(
+      log: widget.log,
+      selected: widget.selected,
+      start: _start,
+      end: _end,
+      cursor: widget.cursor,
+      borderRight: widget.statsDock == StatsDock.left,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.statsDock == StatsDock.left) side,
+        Expanded(child: Column(children: [chart, minimap])),
+        if (widget.statsDock == StatsDock.right) side,
       ],
     );
   }
@@ -280,11 +383,15 @@ class _ChartViewState extends State<ChartView> {
 
 class _ZoomControls extends StatelessWidget {
   const _ZoomControls({
+    required this.locked,
+    required this.onToggleLock,
     required this.onZoomIn,
     required this.onZoomOut,
     required this.onFit,
   });
 
+  final bool locked;
+  final VoidCallback? onToggleLock;
   final VoidCallback onZoomIn;
   final VoidCallback onZoomOut;
   final VoidCallback onFit;
@@ -302,6 +409,13 @@ class _ZoomControls extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _button(
+            locked ? Icons.lock : Icons.lock_open,
+            onToggleLock,
+            locked ? 'Unlock cursor' : 'Lock cursor',
+            active: locked,
+          ),
+          const SizedBox(height: 1, child: ColoredBox(color: kBorder)),
           _button(Icons.add, onZoomIn, 'Zoom in'),
           const SizedBox(height: 1, child: ColoredBox(color: kBorder)),
           _button(Icons.remove, onZoomOut, 'Zoom out'),
@@ -312,7 +426,12 @@ class _ZoomControls extends StatelessWidget {
     );
   }
 
-  Widget _button(IconData icon, VoidCallback onTap, String tooltip) {
+  Widget _button(
+    IconData icon,
+    VoidCallback? onTap,
+    String tooltip, {
+    bool active = false,
+  }) {
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -320,7 +439,7 @@ class _ZoomControls extends StatelessWidget {
         child: SizedBox(
           width: 34,
           height: 32,
-          child: Icon(icon, size: 16, color: kMuted),
+          child: Icon(icon, size: 16, color: active ? kAccent : kMuted),
         ),
       ),
     );
