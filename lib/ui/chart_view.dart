@@ -5,11 +5,12 @@ import 'package:flutter/material.dart';
 import '../models/vehicle_log.dart';
 import '../util/units.dart';
 import 'minimap.dart';
+import 'stats_bar.dart';
 import 'theme.dart';
 
 const double kPadLeft = 16;
 const double kPadRight = 16;
-const double kPadTop = 16;
+const double kPadTop = 22;
 const double kPadBottom = 26;
 
 /// A gap larger than this (seconds) breaks the trace instead of drawing a
@@ -23,12 +24,14 @@ class ChartView extends StatefulWidget {
     required this.selected,
     required this.cursor,
     required this.onCursorChanged,
+    this.showStats = false,
   });
 
   final VehicleLog log;
   final List<int> selected;
   final int? cursor;
   final ValueChanged<int> onCursorChanged;
+  final bool showStats;
 
   @override
   State<ChartView> createState() => _ChartViewState();
@@ -41,6 +44,8 @@ class _ChartViewState extends State<ChartView> {
 
   double _spanAtGesture = 0;
   double _anchorTime = 0;
+  bool _panZoomActive = false;
+  bool _gestureHadTwoFingers = false;
 
   @override
   void initState() {
@@ -107,7 +112,30 @@ class _ChartViewState extends State<ChartView> {
     });
   }
 
-  void _handleScaleUpdate(ScaleUpdateDetails details) {
+  void _beginPanZoom(double dx) {
+    _spanAtGesture = _end - _start;
+    _anchorTime = _timeAt(dx);
+    _panZoomActive = true;
+  }
+
+  void _onScaleStart(ScaleStartDetails details) {
+    _panZoomActive = false;
+    _gestureHadTwoFingers = false;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    // One finger scrubs the cursor; the chart itself never moves.
+    if (details.pointerCount < 2) {
+      if (_gestureHadTwoFingers) return;
+      final index =
+          widget.log.nearestIndex(_timeAt(details.localFocalPoint.dx));
+      if (index != widget.cursor) widget.onCursorChanged(index);
+      return;
+    }
+
+    _gestureHadTwoFingers = true;
+    if (!_panZoomActive) _beginPanZoom(details.localFocalPoint.dx);
+
     final duration = widget.log.duration;
     if (duration <= 0) return;
 
@@ -122,6 +150,11 @@ class _ChartViewState extends State<ChartView> {
       _start = newStart;
       _end = newStart + newSpan;
     });
+  }
+
+  void _onScaleEnd(ScaleEndDetails details) {
+    _panZoomActive = false;
+    _gestureHadTwoFingers = false;
   }
 
   @override
@@ -144,11 +177,9 @@ class _ChartViewState extends State<ChartView> {
                         widget.onCursorChanged(index);
                       },
                       onDoubleTap: () => setState(_fit),
-                      onScaleStart: (details) {
-                        _spanAtGesture = _end - _start;
-                        _anchorTime = _timeAt(details.localFocalPoint.dx);
-                      },
-                      onScaleUpdate: _handleScaleUpdate,
+                      onScaleStart: _onScaleStart,
+                      onScaleUpdate: _onScaleUpdate,
+                      onScaleEnd: _onScaleEnd,
                       child: CustomPaint(
                         painter: _ChartPainter(
                           log: widget.log,
@@ -183,6 +214,14 @@ class _ChartViewState extends State<ChartView> {
             },
           ),
         ),
+        if (widget.showStats)
+          StatsBar(
+            log: widget.log,
+            selected: widget.selected,
+            start: _start,
+            end: _end,
+            cursor: widget.cursor,
+          ),
         Minimap(
           log: widget.log,
           selected: widget.selected,
@@ -389,6 +428,29 @@ class _ChartPainter extends CustomPainter {
         Paint()..color = kTraceColors[slot % kTraceColors.length],
       );
     }
+
+    _paintCursorTag(canvas, plot, x, t);
+  }
+
+  void _paintCursorTag(Canvas canvas, Rect plot, double x, double t) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: formatClock(t),
+        style: const TextStyle(color: Colors.white, fontSize: 10),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    const padding = 5.0;
+    final width = painter.width + padding * 2;
+    final left = (x - width / 2).clamp(plot.left, plot.right - width).toDouble();
+    final rect = Rect.fromLTWH(left, plot.top - 18, width, painter.height + 4);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+      Paint()..color = const Color(0xCC1B2432),
+    );
+    painter.paint(canvas, Offset(left + padding, plot.top - 16));
   }
 
   @override

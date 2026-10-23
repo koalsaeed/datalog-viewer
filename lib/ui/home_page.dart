@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
@@ -28,9 +27,14 @@ class _HomePageState extends State<HomePage> {
   final List<int> _selected = <int>[];
   int? _cursor;
 
-  /// `null` means "decide by screen width".
   bool? _panelOverride;
+  bool _pinned = true;
+  bool _showStats = false;
+  bool _focus = false;
   bool _isNarrow = false;
+  double _topPanelHeight = 210;
+
+  bool get _panelVisible => _panelOverride ?? true;
 
   Future<void> _openLog() async {
     setState(() {
@@ -94,6 +98,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _log = log;
       _busy = false;
+      _focus = false;
       _selected
         ..clear()
         ..addAll(picked);
@@ -130,7 +135,7 @@ class _HomePageState extends State<HomePage> {
               );
             }
 
-            final panelVisible = _panelOverride ?? !_isNarrow;
+            if (_focus) return _focusBody(log);
 
             return Column(
               children: [
@@ -138,14 +143,22 @@ class _HomePageState extends State<HomePage> {
                   log: log,
                   cursor: _cursor,
                   narrow: _isNarrow,
-                  panelVisible: panelVisible,
+                  panelVisible: _panelVisible,
+                  showStats: _showStats,
                   busy: _busy,
                   onOpen: _openLog,
                   onTogglePanel: () =>
-                      setState(() => _panelOverride = !panelVisible),
+                      setState(() => _panelOverride = !_panelVisible),
+                  onToggleStats: () =>
+                      setState(() => _showStats = !_showStats),
+                  onToggleFocus: () => setState(() => _focus = true),
+                  onTogglePin: _isNarrow
+                      ? () => setState(() => _pinned = !_pinned)
+                      : null,
+                  pinned: _pinned,
                 ),
                 const Divider(height: 1, color: kBorder),
-                Expanded(child: _viewer(log, panelVisible)),
+                Expanded(child: _viewer(log)),
               ],
             );
           },
@@ -154,7 +167,42 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _viewer(VehicleLog log, bool panelVisible) {
+  Widget _chart(VehicleLog log) {
+    return ChartView(
+      log: log,
+      selected: _selected,
+      cursor: _cursor,
+      onCursorChanged: (index) => setState(() => _cursor = index),
+      showStats: _showStats,
+    );
+  }
+
+  Widget _focusBody(VehicleLog log) {
+    return Stack(
+      children: [
+        Positioned.fill(child: _chart(log)),
+        Positioned(
+          top: 8,
+          left: 8,
+          child: Material(
+            color: const Color(0xCC1B2432),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => setState(() => _focus = false),
+              child: const SizedBox(
+                width: 38,
+                height: 38,
+                child: Icon(Icons.close_fullscreen, size: 17, color: kMuted),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _viewer(VehicleLog log) {
     final panel = ChannelPanel(
       log: log,
       selected: _selected,
@@ -163,17 +211,12 @@ class _HomePageState extends State<HomePage> {
       onClose: () => setState(() => _panelOverride = false),
     );
 
-    final chart = ChartView(
-      log: log,
-      selected: _selected,
-      cursor: _cursor,
-      onCursorChanged: (index) => setState(() => _cursor = index),
-    );
+    final chart = _chart(log);
 
     if (!_isNarrow) {
       return Row(
         children: [
-          if (panelVisible) ...[
+          if (_panelVisible) ...[
             SizedBox(width: 300, child: panel),
             const VerticalDivider(width: 1, color: kBorder),
           ],
@@ -182,32 +225,63 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    final overlayWidth =
-        math.min(320.0, MediaQuery.of(context).size.width * 0.86);
+    if (!_panelVisible) return chart;
+
+    if (_pinned) {
+      return Column(
+        children: [
+          SizedBox(height: _topPanelHeight, child: panel),
+          _resizeHandle(),
+          Expanded(child: chart),
+        ],
+      );
+    }
 
     return Stack(
       children: [
         Positioned.fill(child: chart),
-        if (panelVisible) ...[
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => setState(() => _panelOverride = false),
-              child: Container(color: const Color(0x99000000)),
-            ),
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: () => setState(() => _panelOverride = false),
+            child: Container(color: const Color(0x99000000)),
           ),
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: overlayWidth,
-            child: Material(
-              color: kSurface,
-              elevation: 12,
-              child: panel,
-            ),
-          ),
-        ],
+        ),
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: MediaQuery.of(context).size.width * 0.86,
+          child: Material(color: kSurface, elevation: 12, child: panel),
+        ),
       ],
+    );
+  }
+
+  Widget _resizeHandle() {
+    final maxHeight = MediaQuery.of(context).size.height * 0.6;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: (details) {
+        setState(() {
+          _topPanelHeight =
+              (_topPanelHeight + details.delta.dy).clamp(120.0, maxHeight).toDouble();
+        });
+      },
+      child: Container(
+        height: 16,
+        color: kSurface,
+        child: Center(
+          child: Container(
+            width: 44,
+            height: 3,
+            decoration: BoxDecoration(
+              color: kBorder,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -218,18 +292,28 @@ class _TopBar extends StatelessWidget {
     required this.cursor,
     required this.narrow,
     required this.panelVisible,
+    required this.showStats,
     required this.busy,
     required this.onOpen,
     required this.onTogglePanel,
+    required this.onToggleStats,
+    required this.onToggleFocus,
+    required this.onTogglePin,
+    required this.pinned,
   });
 
   final VehicleLog log;
   final int? cursor;
   final bool narrow;
   final bool panelVisible;
+  final bool showStats;
   final bool busy;
   final VoidCallback onOpen;
   final VoidCallback onTogglePanel;
+  final VoidCallback onToggleStats;
+  final VoidCallback onToggleFocus;
+  final VoidCallback? onTogglePin;
+  final bool pinned;
 
   @override
   Widget build(BuildContext context) {
@@ -238,28 +322,20 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 4),
-          IconButton(
-            onPressed: busy ? null : onOpen,
-            icon: const Icon(Icons.folder_open, size: 18),
-            color: kMuted,
-            tooltip: 'Open another log',
-            visualDensity: VisualDensity.compact,
+          _icon(Icons.folder_open, 'Open another log', busy ? null : onOpen),
+          _icon(
+            panelVisible ? Icons.chevron_left : Icons.chevron_right,
+            panelVisible ? 'Hide channels' : 'Show channels',
+            onTogglePanel,
           ),
-          IconButton(
-            onPressed: onTogglePanel,
-            icon: Icon(
-              narrow
-                  ? Icons.view_sidebar
-                  : (panelVisible
-                      ? Icons.chevron_left
-                      : Icons.chevron_right),
-              size: 18,
+          if (onTogglePin != null)
+            _icon(
+              pinned ? Icons.push_pin : Icons.push_pin_outlined,
+              pinned ? 'Unpin panel' : 'Pin panel to top',
+              onTogglePin,
+              active: pinned,
             ),
-            color: kMuted,
-            tooltip: panelVisible ? 'Hide channels' : 'Show channels',
-            visualDensity: VisualDensity.compact,
-          ),
-          const SizedBox(width: 2),
+          const SizedBox(width: 6),
           Flexible(
             child: Text(
               log.fileName,
@@ -278,9 +354,9 @@ class _TopBar extends StatelessWidget {
             _Pill(text: formatClock(log.duration)),
           ],
           const Spacer(),
-          if (cursor != null)
+          if (cursor != null && !narrow)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 10),
               child: Text(
                 't = ${formatClock(log.time[cursor!])}',
                 style: const TextStyle(
@@ -290,8 +366,31 @@ class _TopBar extends StatelessWidget {
                 ),
               ),
             ),
+          _icon(
+            Icons.straighten,
+            showStats ? 'Hide min / max' : 'Show min / max',
+            onToggleStats,
+            active: showStats,
+          ),
+          _icon(Icons.fullscreen, 'Focus mode', onToggleFocus),
+          const SizedBox(width: 4),
         ],
       ),
+    );
+  }
+
+  Widget _icon(
+    IconData icon,
+    String tooltip,
+    VoidCallback? onPressed, {
+    bool active = false,
+  }) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      color: active ? kAccent : kMuted,
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
     );
   }
 }
