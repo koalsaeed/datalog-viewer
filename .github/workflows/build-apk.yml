@@ -38,6 +38,15 @@ jobs:
             /tmp/scaffold
           cp -r /tmp/scaffold/android .
 
+      - name: App icon and label
+        run: |
+          for spec in "mdpi 48" "hdpi 72" "xhdpi 96" "xxhdpi 144" "xxxhdpi 192"; do
+            set -- $spec
+            cp "assets/icon/icon-$2.png" "android/app/src/main/res/mipmap-$1/ic_launcher.png"
+          done
+          sed -i 's/android:label="[^"]*"/android:label="PWP datalogger"/' android/app/src/main/AndroidManifest.xml
+          grep -o 'android:label="[^"]*"' android/app/src/main/AndroidManifest.xml
+
       - name: Resolve dependencies
         run: flutter pub get
 
