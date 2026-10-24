@@ -6,13 +6,23 @@ import '../models/vehicle_log.dart';
 import '../util/units.dart';
 import 'theme.dart';
 
+/// Two lists in one scroll view:
+///  * **IN CHART** — picked channels, reorderable with a long press, hidden
+///    temporarily with a double tap (or the eye button).
+///  * **ALL CHANNELS** — everything else, tap to add.
 class ChannelPanel extends StatefulWidget {
   const ChannelPanel({
     super.key,
     required this.log,
     required this.selected,
+    required this.hidden,
+    required this.visibleOrder,
+    required this.aliases,
+    required this.onEdit,
     required this.cursor,
     required this.onToggle,
+    required this.onToggleHidden,
+    required this.onReorder,
     required this.onClose,
     required this.onIsolate,
     required this.onClear,
@@ -20,9 +30,25 @@ class ChannelPanel extends StatefulWidget {
   });
 
   final VehicleLog log;
+
+  /// Picked channels, in the user's order.
   final List<int> selected;
+
+  /// Picked but temporarily muted.
+  final Set<int> hidden;
+
+  /// Picked and visible — decides trace colours so they never shift.
+  final List<int> visibleOrder;
+
+  /// Custom display names for picked channels.
+  final Map<int, String> aliases;
+
+  final VoidCallback onEdit;
+
   final int? cursor;
   final ValueChanged<int> onToggle;
+  final ValueChanged<int> onToggleHidden;
+  final void Function(int oldIndex, int newIndex) onReorder;
   final VoidCallback onClose;
   final ValueChanged<int> onIsolate;
   final VoidCallback onClear;
@@ -41,14 +67,21 @@ class _ChannelPanelState extends State<ChannelPanel> {
     super.dispose();
   }
 
+  Color? _colourFor(int channelIndex) {
+    final slot = widget.visibleOrder.indexOf(channelIndex);
+    if (slot < 0) return null;
+    return kTraceColors[slot % kTraceColors.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final query = _search.text.trim().toLowerCase();
-    final matches = <int>[];
+    final others = <int>[];
     for (var i = 0; i < widget.log.channels.length; i++) {
+      if (widget.selected.contains(i)) continue;
       final channel = widget.log.channels[i];
       if (query.isEmpty || channel.name.toLowerCase().contains(query)) {
-        matches.add(i);
+        others.add(i);
       }
     }
 
@@ -60,41 +93,96 @@ class _ChannelPanelState extends State<ChannelPanel> {
           _header(),
           _searchField(),
           Expanded(
-            child: matches.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No channel matches',
-                      style: TextStyle(color: kMuted, fontSize: 12),
+            child: CustomScrollView(
+              slivers: [
+                if (widget.selected.isNotEmpty) ...[
+                  _section(
+                    'IN CHART',
+                    '${widget.selected.length}',
+                    trailing: IconButton(
+                      onPressed: widget.onEdit,
+                      icon: const Icon(Icons.tune, size: 15),
+                      color: kMuted,
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Rename / reorder',
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: matches.length,
-                    itemBuilder: (context, position) {
-                      final index = matches[position];
-                      final slot = widget.selected.indexOf(index);
-                      return _ChannelRow(
-                        channel: widget.log.channels[index],
-                        color: slot < 0
-                            ? null
-                            : kTraceColors[slot % kTraceColors.length],
-                        value: widget.cursor == null
-                            ? null
-                            : widget.log.channels[index].valueAt(widget.cursor!),
-                        isolated: widget.highlighted == index,
-                        onTap: () => widget.onToggle(index),
-                        onLongPress: () => widget.onIsolate(index),
+                  ),
+                  SliverReorderableList(
+                    itemCount: widget.selected.length,
+                    onReorder: widget.onReorder,
+                    itemBuilder: (context, index) {
+                      final channelIndex = widget.selected[index];
+                      final channel = widget.log.channels[channelIndex];
+                      return ReorderableDelayedDragStartListener(
+                        key: ValueKey<int>(channelIndex),
+                        index: index,
+                        child: _SelectedRow(
+                          channel: channel,
+                          label: (widget.aliases[channelIndex] ?? '').trim().isEmpty
+                              ? channel.name
+                              : widget.aliases[channelIndex]!,
+                          colour: _colourFor(channelIndex),
+                          muted: widget.hidden.contains(channelIndex),
+                          isolated: widget.highlighted == channelIndex,
+                          value: widget.cursor == null
+                              ? null
+                              : channel.valueAt(widget.cursor!),
+                          onToggleHidden: () =>
+                              widget.onToggleHidden(channelIndex),
+                          onIsolate: () => widget.onIsolate(channelIndex),
+                        ),
                       );
                     },
                   ),
+                ],
+                _section('ALL CHANNELS', '${others.length}'),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, position) {
+                      final channelIndex = others[position];
+                      final channel = widget.log.channels[channelIndex];
+                      return _ChannelRow(
+                        channel: channel,
+                        value: widget.cursor == null
+                            ? null
+                            : channel.valueAt(widget.cursor!),
+                        onTap: () => widget.onToggle(channelIndex),
+                      );
+                    },
+                    childCount: others.length,
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  SliverToBoxAdapter _section(String title, String count, {Widget? trailing}) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 4),
+        child: Row(
+          children: [
+            Text(title, style: kLabelStyle),
+            const SizedBox(width: 8),
+            Text(
+              count,
+              style: const TextStyle(fontSize: 10, color: Color(0xFF4C5866)),
+            ),
+            if (trailing != null) ...[const Spacer(), trailing],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _header() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 6, 6),
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 4),
       child: Row(
         children: [
           const Text('CHANNELS', style: kLabelStyle),
@@ -104,7 +192,7 @@ class _ChannelPanelState extends State<ChannelPanel> {
             style: const TextStyle(color: kMuted, fontSize: 11),
           ),
           const Spacer(),
-          if (widget.selected.isNotEmpty) ...[
+          if (widget.selected.isNotEmpty)
             TextButton(
               onPressed: widget.onClear,
               style: TextButton.styleFrom(
@@ -117,7 +205,6 @@ class _ChannelPanelState extends State<ChannelPanel> {
                 style: TextStyle(fontSize: 11, color: kMuted),
               ),
             ),
-          ],
           IconButton(
             onPressed: widget.onClose,
             icon: const Icon(Icons.close, size: 16),
@@ -168,48 +255,139 @@ class _ChannelPanelState extends State<ChannelPanel> {
   }
 }
 
-class _ChannelRow extends StatelessWidget {
-  const _ChannelRow({
+/// A row inside IN CHART: draggable, muteable, isolatable.
+class _SelectedRow extends StatelessWidget {
+  const _SelectedRow({
     required this.channel,
-    required this.color,
-    required this.value,
+    required this.label,
+    required this.colour,
+    required this.muted,
     required this.isolated,
-    required this.onTap,
-    required this.onLongPress,
+    required this.value,
+    required this.onToggleHidden,
+    required this.onIsolate,
   });
 
   final LogChannel channel;
-  final Color? color;
-  final double? value;
+  final String label;
+  final Color? colour;
+  final bool muted;
   final bool isolated;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final double? value;
+  final VoidCallback onToggleHidden;
+  final VoidCallback onIsolate;
 
   @override
   Widget build(BuildContext context) {
-    final active = color != null;
-
-    return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
+    return GestureDetector(
+      onDoubleTap: onToggleHidden,
       child: Container(
         height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.only(right: 6),
         decoration: BoxDecoration(
           color: isolated
               ? const Color(0xFF223047)
-              : (active ? kSurfaceAlt : null),
-          border: isolated
-              ? Border(left: BorderSide(color: color ?? kAccent, width: 2))
-              : null,
+              : (muted ? null : kSurfaceAlt),
         ),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: onIsolate,
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: 22,
+                height: 46,
+                child: Center(
+                  child: Container(
+                    width: 3,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: muted
+                          ? const Color(0xFF39424F)
+                          : (colour ?? const Color(0xFF2A3441)),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Opacity(
+                opacity: muted ? 0.45 : 1,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: muted ? Colors.white54 : Colors.white,
+                        fontWeight:
+                            isolated ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                    Text(
+                      channel.unit.isEmpty ? '—' : channel.unit,
+                      style: const TextStyle(fontSize: 10, color: kMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Text(
+              channel.hasData ? formatValue(value) : '--',
+              style: TextStyle(
+                fontSize: 12,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: muted ? kMuted : Colors.white,
+              ),
+            ),
+            IconButton(
+              onPressed: onToggleHidden,
+              icon: Icon(
+                muted ? Icons.visibility_off : Icons.visibility,
+                size: 15,
+              ),
+              color: muted ? kMuted : kAccent,
+              visualDensity: VisualDensity.compact,
+              tooltip: muted ? 'Show on chart' : 'Hide from chart',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A row in ALL CHANNELS: tap to add.
+class _ChannelRow extends StatelessWidget {
+  const _ChannelRow({
+    required this.channel,
+    required this.value,
+    required this.onTap,
+  });
+
+  final LogChannel channel;
+  final double? value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           children: [
             Container(
               width: 3,
-              height: 24,
+              height: 22,
               decoration: BoxDecoration(
-                color: color ?? const Color(0xFF2A3441),
+                color: const Color(0xFF2A3441),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -223,13 +401,9 @@ class _ChannelRow extends StatelessWidget {
                     channel.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12.5,
-                      color: isolated
-                          ? Colors.white
-                          : (active ? Colors.white : Colors.white70),
-                      fontWeight:
-                          isolated ? FontWeight.w600 : FontWeight.normal,
+                      color: Colors.white70,
                     ),
                   ),
                   Text(
@@ -240,17 +414,12 @@ class _ChannelRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            if (isolated)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.center_focus_strong, size: 12, color: kAccent),
-              ),
             Text(
               _readout(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: active ? Colors.white : kMuted,
+                fontFeatures: [FontFeature.tabularFigures()],
+                color: kMuted,
               ),
             ),
           ],

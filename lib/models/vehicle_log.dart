@@ -38,6 +38,7 @@ class VehicleLog {
     required this.channels,
     required this.startTime,
     required this.sampleCount,
+    this.gapSeconds = 0.1,
   });
 
   final String fileName;
@@ -51,6 +52,12 @@ class VehicleLog {
   final double startTime;
 
   final int sampleCount;
+
+  /// A sample-to-sample jump larger than this is treated as missing data.
+  ///
+  /// Derived from the log's own median interval, never a fixed constant: a
+  /// 1 Hz logger would otherwise look like one continuous gap.
+  final double gapSeconds;
 
   double get duration => time.isEmpty ? 0 : time.last;
 
@@ -74,4 +81,24 @@ class VehicleLog {
     final upperGap = time[high] - seconds;
     return lowerGap <= upperGap ? low : high;
   }
+}
+
+/// Picks a gap threshold from the log's own sampling interval.
+///
+/// Median rather than mean, so a handful of long dropouts cannot drag the
+/// threshold up and hide real breaks.
+double estimateGapSeconds(Float64List time) {
+  if (time.length < 4) return 0.1;
+
+  final deltas = <double>[];
+  for (var i = 1; i < time.length; i++) {
+    final delta = time[i] - time[i - 1];
+    if (delta.isFinite && delta > 0) deltas.add(delta);
+  }
+  if (deltas.isEmpty) return 0.1;
+
+  deltas.sort();
+  final median = deltas[deltas.length ~/ 2];
+  final threshold = median * 3;
+  return threshold < 0.02 ? 0.02 : threshold;
 }

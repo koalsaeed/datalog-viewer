@@ -19,6 +19,7 @@ class StatsBar extends StatelessWidget {
     required this.start,
     required this.end,
     required this.cursor,
+    this.aliases = const <int, String>{},
   });
 
   final VehicleLog log;
@@ -26,6 +27,13 @@ class StatsBar extends StatelessWidget {
   final double start;
   final double end;
   final int? cursor;
+  final Map<int, String> aliases;
+
+  String _labelFor(int channelIndex) {
+    final alias = aliases[channelIndex];
+    if (alias != null && alias.trim().isNotEmpty) return alias;
+    return log.channels[channelIndex].name;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +62,7 @@ class StatsBar extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  channel.name,
+                  _labelFor(selected[slot]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, color: Colors.white70),
@@ -171,6 +179,7 @@ class StatsSide extends StatelessWidget {
     required this.end,
     required this.cursor,
     required this.borderRight,
+    this.aliases = const <int, String>{},
   });
 
   final VehicleLog log;
@@ -179,6 +188,13 @@ class StatsSide extends StatelessWidget {
   final double end;
   final int? cursor;
   final bool borderRight;
+  final Map<int, String> aliases;
+
+  String _labelFor(int channelIndex) {
+    final alias = aliases[channelIndex];
+    if (alias != null && alias.trim().isNotEmpty) return alias;
+    return log.channels[channelIndex].name;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -219,6 +235,7 @@ class StatsSide extends StatelessWidget {
                       final range = _rangeOf(channel);
                       return _SideRow(
                         channel: channel,
+                        label: _labelFor(selected[slot]),
                         colour: kTraceColors[slot % kTraceColors.length],
                         current:
                             cursor == null ? null : channel.valueAt(cursor!),
@@ -256,6 +273,7 @@ class StatsSide extends StatelessWidget {
 class _SideRow extends StatelessWidget {
   const _SideRow({
     required this.channel,
+    required this.label,
     required this.colour,
     required this.current,
     required this.min,
@@ -264,6 +282,7 @@ class _SideRow extends StatelessWidget {
   });
 
   final LogChannel channel;
+  final String label;
   final Color colour;
   final double? current;
   final double min;
@@ -290,7 +309,7 @@ class _SideRow extends StatelessWidget {
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  channel.name,
+                  label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, color: Colors.white70),

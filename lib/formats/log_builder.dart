@@ -58,5 +58,6 @@ VehicleLog buildLog({
     channels: channels,
     startTime: start,
     sampleCount: count,
+    gapSeconds: estimateGapSeconds(timeArray),
   );
 }

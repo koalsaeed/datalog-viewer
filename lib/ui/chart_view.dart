@@ -13,10 +13,6 @@ const double kPadRight = 16;
 const double kPadTop = 22;
 const double kPadBottom = 26;
 
-/// A gap larger than this (seconds) breaks the trace instead of drawing a
-/// straight line across missing samples.
-const double kGapSeconds = 0.10;
-
 /// Where the min / max readout lives relative to the chart.
 enum StatsDock { bottom, left, right }
 
@@ -34,6 +30,7 @@ class ChartView extends StatefulWidget {
     this.statsDock = StatsDock.bottom,
     this.cursorLocked = false,
     this.onToggleLock,
+    this.aliases = const <int, String>{},
   });
 
   final VehicleLog log;
@@ -55,6 +52,9 @@ class ChartView extends StatefulWidget {
   final bool cursorLocked;
 
   final VoidCallback? onToggleLock;
+
+  /// Custom display names for channels.
+  final Map<int, String> aliases;
 
   @override
   State<ChartView> createState() => _ChartViewState();
@@ -127,6 +127,22 @@ class _ChartViewState extends State<ChartView> {
     setState(() {
       _start = newStart;
       _end = newStart + newSpan;
+    });
+  }
+
+  void _panBySeconds(double seconds) {
+    final duration = widget.log.duration;
+    if (duration <= 0) return;
+
+    final span = _end - _start;
+    final newStart = (_start + seconds)
+        .clamp(0.0, math.max(0.0, duration - span))
+        .toDouble();
+
+    if (newStart == _start) return;
+    setState(() {
+      _start = newStart;
+      _end = newStart + span;
     });
   }
 
@@ -300,6 +316,7 @@ class _ChartViewState extends State<ChartView> {
                       yTop: _yTop,
                       ySpan: _ySpan,
                       laneMode: widget.laneMode,
+                      aliases: widget.aliases,
                     ),
                     child: widget.selected.isEmpty
                         ? const Center(
@@ -308,7 +325,15 @@ class _ChartViewState extends State<ChartView> {
                               style: TextStyle(color: kMuted, fontSize: 13),
                             ),
                           )
-                        : const SizedBox.expand(),
+                        : widget.log.duration <= 0
+                            ? const Center(
+                                child: Text(
+                                  'No time range in this log',
+                                  style:
+                                      TextStyle(color: kMuted, fontSize: 13),
+                                ),
+                              )
+                            : const SizedBox.expand(),
                   ),
                 ),
               ),
@@ -329,16 +354,31 @@ class _ChartViewState extends State<ChartView> {
       ),
     );
 
-    final minimap = Minimap(
-      log: widget.log,
-      selected: widget.selected,
-      start: _start,
-      end: _end,
-      onSeekTo: _seekToStart,
-      cursorTime:
-          widget.cursor == null ? null : widget.log.time[widget.cursor!],
-      locked: widget.cursorLocked,
-      onCursorTime: _setCursorFromTime,
+    final duration = widget.log.duration;
+    final minimap = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Minimap(
+          log: widget.log,
+          selected: widget.selected,
+          start: _start,
+          end: _end,
+          onSeekTo: _seekToStart,
+          cursorTime:
+              widget.cursor == null ? null : widget.log.time[widget.cursor!],
+          locked: widget.cursorLocked,
+          onCursorTime: _setCursorFromTime,
+        ),
+        _PanBar(
+          centerFraction:
+              duration <= 0 ? 0.5 : ((_start + _end) / 2) / duration,
+          spanFraction: duration <= 0 ? 1 : (_end - _start) / duration,
+          onPanBy: (fractionOfLog) =>
+              _panBySeconds(fractionOfLog * duration),
+          onStep: (direction) =>
+              _panBySeconds(direction * (_end - _start) * 0.5),
+        ),
+      ],
     );
 
     if (!widget.showStats) {
@@ -355,6 +395,7 @@ class _ChartViewState extends State<ChartView> {
             start: _start,
             end: _end,
             cursor: widget.cursor,
+            aliases: widget.aliases,
           ),
           minimap,
         ],
@@ -368,6 +409,7 @@ class _ChartViewState extends State<ChartView> {
       end: _end,
       cursor: widget.cursor,
       borderRight: widget.statsDock == StatsDock.left,
+      aliases: widget.aliases,
     );
 
     return Row(
@@ -377,6 +419,99 @@ class _ChartViewState extends State<ChartView> {
         Expanded(child: Column(children: [chart, minimap])),
         if (widget.statsDock == StatsDock.right) side,
       ],
+    );
+  }
+}
+
+class _PanBar extends StatelessWidget {
+  const _PanBar({
+    required this.centerFraction,
+    required this.spanFraction,
+    required this.onPanBy,
+    required this.onStep,
+  });
+
+  final double centerFraction;
+  final double spanFraction;
+
+  /// Called with a shift expressed as a fraction of the whole log.
+  final ValueChanged<double> onPanBy;
+
+  /// -1 = back, +1 = forward, by half a screen.
+  final ValueChanged<int> onStep;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 38,
+      decoration: const BoxDecoration(
+        color: kSurface,
+        border: Border(top: BorderSide(color: kBorder)),
+      ),
+      child: Row(
+        children: [
+          _button(Icons.chevron_left, () => onStep(-1)),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final span = spanFraction.clamp(0.02, 1.0).toDouble();
+                final left =
+                    (centerFraction - span / 2).clamp(0.0, 1.0 - span).toDouble();
+                final trackWidth = math.max(0.0, width - 12);
+                final windowWidth =
+                    (span * trackWidth).clamp(18.0, math.max(18.0, trackWidth));
+
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragUpdate: (details) {
+                    if (width <= 0) return;
+                    onPanBy(details.delta.dx / width);
+                  },
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Center(
+                          child: Container(
+                            height: 3,
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            color: kBorder,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 6 + left * trackWidth,
+                        width: windowWidth.toDouble(),
+                        top: 9,
+                        bottom: 9,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0x334EA1FF),
+                            border: Border.all(color: kAccent, width: 1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          _button(Icons.chevron_right, () => onStep(1)),
+        ],
+      ),
+    );
+  }
+
+  Widget _button(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        width: 44,
+        height: 38,
+        child: Icon(icon, size: 20, color: kMuted),
+      ),
     );
   }
 }
@@ -458,6 +593,7 @@ class _ChartPainter extends CustomPainter {
     required this.yTop,
     required this.ySpan,
     required this.laneMode,
+    required this.aliases,
   });
 
   final VehicleLog log;
@@ -470,6 +606,13 @@ class _ChartPainter extends CustomPainter {
   final double yTop;
   final double ySpan;
   final bool laneMode;
+  final Map<int, String> aliases;
+
+  String _labelFor(int channelIndex) {
+    final alias = aliases[channelIndex];
+    if (alias != null && alias.trim().isNotEmpty) return alias;
+    return log.channels[channelIndex].name;
+  }
 
   /// Vertical slot for one trace: the whole plot when overlaying, or its own
   /// band when stacking.
@@ -582,7 +725,7 @@ class _ChartPainter extends CustomPainter {
 
       _label(
         canvas,
-        channel.name,
+        _labelFor(selected[slot]),
         Offset(plot.left + 2, top + 4),
         labelColour,
         9.5,
@@ -665,7 +808,7 @@ class _ChartPainter extends CustomPainter {
         started = false;
         continue;
       }
-      if (t - lastTime > kGapSeconds) started = false;
+      if (t - lastTime > log.gapSeconds) started = false;
       lastTime = t;
 
       final x = plot.left + ((t - start) / span).clamp(0.0, 1.0) * plot.width;
@@ -851,6 +994,7 @@ class _ChartPainter extends CustomPainter {
         oldDelegate.showTags != showTags ||
         oldDelegate.highlighted != highlighted ||
         oldDelegate.laneMode != laneMode ||
+        oldDelegate.aliases != aliases ||
         !_sameSelection(oldDelegate.selected, selected);
   }
 

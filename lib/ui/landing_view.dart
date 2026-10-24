@@ -47,7 +47,7 @@ class LandingView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Open an SCT LiveLink CSV log to explore it.\n'
+                'Open a datalog to explore it.\n'
                 'Built for landscape, tuned for a phone.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: kMuted, height: 1.5),

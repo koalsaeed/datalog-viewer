@@ -117,6 +117,7 @@ VehicleLog parseCsvLog(String content, {String fileName = 'log.csv'}) {
     channels: channels,
     startTime: start,
     sampleCount: sampleCount,
+    gapSeconds: estimateGapSeconds(time),
   );
 }
 

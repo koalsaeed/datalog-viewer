@@ -1,0 +1,214 @@
+import 'package:flutter/material.dart';
+
+import '../models/vehicle_log.dart';
+import 'theme.dart';
+
+class ChannelEdit {
+  const ChannelEdit({required this.order, required this.aliases});
+
+  final List<int> order;
+  final Map<int, String> aliases;
+}
+
+/// Rename and reorder the channels that are currently on the chart.
+Future<ChannelEdit?> showChannelEditor(
+  BuildContext context, {
+  required VehicleLog log,
+  required List<int> order,
+  required Map<int, String> aliases,
+}) {
+  return showDialog<ChannelEdit>(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) => _ChannelEditorDialog(
+      log: log,
+      order: order,
+      aliases: aliases,
+    ),
+  );
+}
+
+class _ChannelEditorDialog extends StatefulWidget {
+  const _ChannelEditorDialog({
+    required this.log,
+    required this.order,
+    required this.aliases,
+  });
+
+  final VehicleLog log;
+  final List<int> order;
+  final Map<int, String> aliases;
+
+  @override
+  State<_ChannelEditorDialog> createState() => _ChannelEditorDialogState();
+}
+
+class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
+  late List<int> _order;
+  late Map<int, TextEditingController> _controllers;
+  late Map<int, String> _aliases;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = List<int>.from(widget.order);
+    _aliases = Map<int, String>.from(widget.aliases);
+    _controllers = <int, TextEditingController>{};
+    for (final index in _order) {
+      _controllers[index] = TextEditingController(text: _aliases[index] ?? '');
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _move(int from, int delta) {
+    final to = from + delta;
+    if (to < 0 || to >= _order.length) return;
+    setState(() {
+      final item = _order.removeAt(from);
+      _order.insert(to, item);
+    });
+  }
+
+  void _save() {
+    final aliases = <int, String>{};
+    for (final index in _order) {
+      final text = _controllers[index]?.text.trim() ?? '';
+      final original = widget.log.channels[index].name;
+      if (text.isNotEmpty && text != original) aliases[index] = text;
+    }
+    Navigator.of(context).pop(ChannelEdit(order: _order, aliases: aliases));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context).size;
+
+    return AlertDialog(
+      backgroundColor: kSurface,
+      titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+      contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      title: Row(
+        children: [
+          const Icon(Icons.tune, size: 18, color: kAccent),
+          const SizedBox(width: 10),
+          const Text(
+            'Edit chart channels',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+          const Spacer(),
+          Text(
+            '${_order.length}',
+            style: const TextStyle(fontSize: 11, color: kMuted),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: media.width < 620 ? media.width * 0.86 : 560,
+        height: media.height < 460 ? media.height * 0.7 : 420,
+        child: _order.isEmpty
+            ? const Center(
+                child: Text(
+                  'No channels on the chart yet',
+                  style: TextStyle(color: kMuted, fontSize: 12),
+                ),
+              )
+            : ListView.separated(
+                itemCount: _order.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, color: kBorder),
+                itemBuilder: (context, position) {
+                  final index = _order[position];
+                  final channel = widget.log.channels[index];
+                  final colour =
+                      kTraceColors[position % kTraceColors.length];
+
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: 26,
+                        child: Center(
+                          child: Container(
+                            width: 3,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: colour,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _controllers[index],
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                          cursorColor: kAccent,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: channel.name,
+                            hintStyle: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF5A6779),
+                            ),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 10),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: position == 0
+                            ? null
+                            : () => _move(position, -1),
+                        icon: const Icon(Icons.keyboard_arrow_up, size: 18),
+                        color: kMuted,
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Move up',
+                      ),
+                      IconButton(
+                        onPressed: position == _order.length - 1
+                            ? null
+                            : () => _move(position, 1),
+                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                        color: kMuted,
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Move down',
+                      ),
+                    ],
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: kMuted, fontSize: 12.5),
+          ),
+        ),
+        FilledButton(
+          onPressed: _save,
+          style: FilledButton.styleFrom(
+            backgroundColor: kAccent,
+            foregroundColor: const Color(0xFF04121F),
+            textStyle: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}

@@ -8,6 +8,7 @@ import '../models/vehicle_log.dart';
 import '../parsers/csv_parser.dart';
 import '../services/log_loader.dart';
 import '../util/units.dart';
+import 'channel_editor.dart';
 import 'channel_panel.dart';
 import 'chart_view.dart';
 import 'landing_view.dart';
@@ -28,8 +29,14 @@ class _HomePageState extends State<HomePage> {
   String? _error;
 
   final List<int> _selected = <int>[];
+  final Set<int> _hidden = <int>{};
+  Map<int, String> _aliases = <int, String>{};
   int? _cursor;
   int? _isolated;
+
+  /// Channels that actually reach the chart, in panel order.
+  List<int> get _visible =>
+      _selected.where((index) => !_hidden.contains(index)).toList();
 
   bool? _panelOverride;
   PanelDock? _dockOverride;
@@ -67,6 +74,7 @@ class _HomePageState extends State<HomePage> {
         _busy = false;
         _error = error.toString();
       });
+      _notify('Could not open: $error');
     }
   }
 
@@ -84,28 +92,30 @@ class _HomePageState extends State<HomePage> {
         _busy = false;
         _error = error.toString();
       });
+      _notify('Could not open: $error');
     }
   }
 
   void _applyLog(VehicleLog log) {
-    const wanted = <String>[
-      'rpm',
-      'throttle angle Actual',
-      'lambse bank 1',
-      'vehicle speed mph',
-    ];
+    // Match by keyword, not by exact name: SCT calls it "rpm" while Cobb
+    // writes "RPM (RPM)" and "A/F Sens 1 Ratio (AFR)".
+    const wanted = <String>['rpm', 'boost', 'afr', 'timing', 'throttle', 'speed'];
 
     final picked = <int>[];
-    for (final name in wanted) {
+    for (final key in wanted) {
       final index = log.channels.indexWhere(
-        (channel) => channel.name.toLowerCase() == name.toLowerCase(),
+        (channel) => channel.hasData && channel.name.toLowerCase().contains(key),
       );
       if (index >= 0 && !picked.contains(index)) picked.add(index);
+      if (picked.length >= 4) break;
     }
     if (picked.isEmpty) {
       for (var i = 0; i < log.channels.length && picked.length < 3; i++) {
         if (log.channels[i].hasData) picked.add(i);
       }
+    }
+    if (picked.isEmpty && log.channels.isNotEmpty) {
+      picked.add(0);
     }
 
     setState(() {
@@ -116,28 +126,87 @@ class _HomePageState extends State<HomePage> {
       _selected
         ..clear()
         ..addAll(picked);
+      _hidden.clear();
+      _aliases = <int, String>{};
       _cursor = log.sampleCount > 0 ? log.sampleCount ~/ 2 : null;
     });
+
+    _notify(
+      'Opened ${log.fileName} · ${log.channels.length} channels · '
+      '${log.sampleCount} rows',
+    );
+  }
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message, style: const TextStyle(fontSize: 12.5)),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   void _toggleChannel(int index) {
     setState(() {
       if (_selected.contains(index)) {
         _selected.remove(index);
+        _hidden.remove(index);
         if (_isolated == index) _isolated = null;
         return;
       }
       if (_selected.length >= kTraceColors.length) {
         final dropped = _selected.removeAt(0);
+        _hidden.remove(dropped);
         if (_isolated == dropped) _isolated = null;
       }
       _selected.add(index);
     });
   }
 
+  /// Hides a picked channel from the chart but keeps it in the list.
+  void _toggleHidden(int index) {
+    setState(() {
+      if (!_hidden.remove(index)) _hidden.add(index);
+      if (_hidden.contains(index) && _isolated == index) _isolated = null;
+    });
+  }
+
+  void _reorderChannels(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+      if (oldIndex < 0 || oldIndex >= _selected.length) return;
+      final channel = _selected.removeAt(oldIndex);
+      _selected.insert(newIndex.clamp(0, _selected.length), channel);
+    });
+  }
+
   void _isolateChannel(int index) {
     setState(() {
       _isolated = _isolated == index ? null : index;
+    });
+  }
+
+  Future<void> _openChannelEditor() async {
+    final log = _log;
+    if (log == null) return;
+
+    final result = await showChannelEditor(
+      context,
+      log: log,
+      order: _selected,
+      aliases: _aliases,
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _selected
+        ..clear()
+        ..addAll(result.order);
+      _aliases = Map<int, String>.from(result.aliases);
     });
   }
 
@@ -209,7 +278,7 @@ class _HomePageState extends State<HomePage> {
   Widget _chart(VehicleLog log) {
     return ChartView(
       log: log,
-      selected: _selected,
+      selected: _visible,
       cursor: _cursor,
       onCursorChanged: (index) => setState(() => _cursor = index),
       showStats: _showStats,
@@ -217,6 +286,7 @@ class _HomePageState extends State<HomePage> {
       showTags: _showTags,
       highlighted: _isolated,
       laneMode: _lanes,
+      aliases: _aliases,
       cursorLocked: _cursorLocked,
       onToggleLock: () => setState(() => _cursorLocked = !_cursorLocked),
     );
@@ -251,12 +321,19 @@ class _HomePageState extends State<HomePage> {
     final panel = ChannelPanel(
       log: log,
       selected: _selected,
+      hidden: _hidden,
+      visibleOrder: _visible,
+      aliases: _aliases,
+      onEdit: _openChannelEditor,
       cursor: _cursor,
       onToggle: _toggleChannel,
+      onToggleHidden: _toggleHidden,
+      onReorder: _reorderChannels,
       onClose: () => setState(() => _panelOverride = false),
       onIsolate: _isolateChannel,
       onClear: () => setState(() {
         _selected.clear();
+        _hidden.clear();
         _isolated = null;
       }),
       highlighted: _isolated,
