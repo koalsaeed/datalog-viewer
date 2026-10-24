@@ -35,6 +35,7 @@ class ChartView extends StatefulWidget {
     this.initialEnd,
     this.onViewport,
     this.onEditChannels,
+    this.onReorderChannels,
   });
 
   final VehicleLog log;
@@ -65,6 +66,7 @@ class ChartView extends StatefulWidget {
   final double? initialEnd;
   final void Function(double start, double end)? onViewport;
   final VoidCallback? onEditChannels;
+  final void Function(int oldIndex, int newIndex)? onReorderChannels;
 
   @override
   State<ChartView> createState() => _ChartViewState();
@@ -442,6 +444,7 @@ class _ChartViewState extends State<ChartView> {
       borderRight: widget.statsDock == StatsDock.left,
       aliases: widget.aliases,
       onEdit: widget.onEditChannels,
+      onReorder: widget.onReorderChannels,
     );
 
     return Row(
@@ -875,6 +878,7 @@ class _ChartPainter extends CustomPainter {
     // lasts one sample still shows. Plain downsampling would erase it.
     final mins = List<double>.filled(columns, double.infinity);
     final maxs = List<double>.filled(columns, double.negativeInfinity);
+    final lasts = List<double>.filled(columns, double.nan);
 
     for (var i = from; i <= to; i++) {
       final value = channel.values[i];
@@ -885,6 +889,7 @@ class _ChartPainter extends CustomPainter {
       if (c >= columns) c = columns - 1;
       if (value < mins[c]) mins[c] = value;
       if (value > maxs[c]) maxs[c] = value;
+      lasts[c] = value;
     }
 
     final barPaint = Paint()
@@ -893,16 +898,33 @@ class _ChartPainter extends CustomPainter {
       ..strokeWidth = math.max(1.0, width)
       ..isAntiAlias = true;
 
+    // A connecting polyline keeps the trace continuous; the bars on top of it
+    // preserve the min/max of every column.
+    final linePath = Path();
+    var started = false;
+    for (var c = 0; c < columns; c++) {
+      if (!mins[c].isFinite) {
+        started = false;
+        continue;
+      }
+      final x = area.left + (c + 0.5) * area.width / columns;
+      final y = _yForValue(channel, lasts[c], area);
+      if (started) {
+        linePath.lineTo(x, y);
+      } else {
+        linePath.moveTo(x, y);
+        started = true;
+      }
+    }
+    canvas.drawPath(linePath, barPaint);
+
     for (var c = 0; c < columns; c++) {
       if (!mins[c].isFinite) continue;
       final x = area.left + (c + 0.5) * area.width / columns;
       final yHigh = _yForValue(channel, maxs[c], area);
       final yLow = _yForValue(channel, mins[c], area);
-      if ((yLow - yHigh).abs() < 0.8) {
-        canvas.drawLine(Offset(x, yHigh - 0.5), Offset(x, yHigh + 0.5), barPaint);
-      } else {
-        canvas.drawLine(Offset(x, yHigh), Offset(x, yLow), barPaint);
-      }
+      if ((yLow - yHigh).abs() < 0.8) continue;
+      canvas.drawLine(Offset(x, yHigh), Offset(x, yLow), barPaint);
     }
 
     canvas.restore();

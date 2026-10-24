@@ -167,32 +167,60 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _applyLog(VehicleLog log) {
-    // Match by keyword, not by exact name: SCT calls it "rpm" while Cobb
-    // writes "RPM (RPM)" and "A/F Sens 1 Ratio (AFR)".
-    const wanted = <String>['rpm', 'boost', 'afr', 'timing', 'throttle', 'speed'];
+    // Pick the channels that actually describe a pull, in a sensible order.
+    const priorities = <String>[
+      'rpm',
+      'boost',
+      'map',
+      'manifold',
+      'afr',
+      'lambda',
+      'lambse',
+      'throttle',
+      'tps',
+      'timing',
+      'advance',
+      'knock',
+      'speed',
+      'maf',
+      'load',
+    ];
 
     final picked = <int>[];
-    for (final key in wanted) {
+    for (final key in priorities) {
+      if (picked.length >= 4) break;
       final index = log.channels.indexWhere(
         (channel) => channel.hasData && channel.name.toLowerCase().contains(key),
       );
       if (index >= 0 && !picked.contains(index)) picked.add(index);
-      if (picked.length >= 4) break;
     }
-    if (picked.isEmpty) {
-      for (var i = 0; i < log.channels.length && picked.length < 3; i++) {
-        if (log.channels[i].hasData) picked.add(i);
+
+    // Nothing matched: take the channels with the widest spread, which are the
+    // ones worth looking at.
+    if (picked.length < 2) {
+      final ranked = <int>[
+        for (var i = 0; i < log.channels.length; i++)
+          if (log.channels[i].hasData) i,
+      ]..sort((a, b) {
+          final spreadA = log.channels[a].max - log.channels[a].min;
+          final spreadB = log.channels[b].max - log.channels[b].min;
+          return spreadB.compareTo(spreadA);
+        });
+      for (final index in ranked) {
+        if (picked.length >= 3) break;
+        if (!picked.contains(index)) picked.add(index);
       }
     }
-    if (picked.isEmpty && log.channels.isNotEmpty) {
-      picked.add(0);
-    }
+
+    if (picked.isEmpty && log.channels.isNotEmpty) picked.add(0);
 
     setState(() {
       _log = log;
       _busy = false;
       _focus = false;
       _isolated = null;
+      // Three or more traces read better stacked than on top of each other.
+      _lanes = picked.length >= 3;
       _selected
         ..clear()
         ..addAll(picked);
@@ -389,6 +417,7 @@ class _HomePageState extends State<HomePage> {
         _savedEnd = end;
       },
       onEditChannels: _openChannelEditor,
+      onReorderChannels: _reorderChannels,
     );
   }
 

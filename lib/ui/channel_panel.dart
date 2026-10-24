@@ -126,6 +126,7 @@ class _ChannelPanelState extends State<ChannelPanel> {
                           onToggleHidden: () =>
                               widget.onToggleHidden(channelIndex),
                           onIsolate: () => widget.onIsolate(channelIndex),
+                          dragIndex: index,
                         ),
                       );
                     },
@@ -273,6 +274,7 @@ class _SelectedRow extends StatelessWidget {
     required this.range,
     required this.onToggleHidden,
     required this.onIsolate,
+    required this.dragIndex,
   });
 
   final LogChannel channel;
@@ -285,11 +287,11 @@ class _SelectedRow extends StatelessWidget {
   final String range;
   final VoidCallback onToggleHidden;
   final VoidCallback onIsolate;
+  final int dragIndex;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onDoubleTap: onToggleHidden,
       child: Container(
         height: 46,
         padding: const EdgeInsets.only(right: 6),
@@ -358,6 +360,17 @@ class _SelectedRow extends StatelessWidget {
                 fontSize: 12,
                 fontFeatures: const [FontFeature.tabularFigures()],
                 color: muted ? kMuted : Colors.white,
+              ),
+            ),
+            ReorderableDragStartListener(
+              index: dragIndex,
+              child: const Padding(
+                padding: EdgeInsets.only(left: 4, right: 2),
+                child: Icon(
+                  Icons.drag_indicator,
+                  size: 16,
+                  color: Color(0xFF4C5866),
+                ),
               ),
             ),
             IconButton(

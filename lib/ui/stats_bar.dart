@@ -181,6 +181,7 @@ class StatsSide extends StatelessWidget {
     required this.borderRight,
     this.aliases = const <int, String>{},
     this.onEdit,
+    this.onReorder,
   });
 
   final VehicleLog log;
@@ -191,6 +192,7 @@ class StatsSide extends StatelessWidget {
   final bool borderRight;
   final Map<int, String> aliases;
   final VoidCallback? onEdit;
+  final void Function(int oldIndex, int newIndex)? onReorder;
 
   String _labelFor(int channelIndex) {
     final alias = aliases[channelIndex];
@@ -242,21 +244,27 @@ class StatsSide extends StatelessWidget {
                       style: TextStyle(color: kMuted, fontSize: 11),
                     ),
                   )
-                : ListView.builder(
+                : ReorderableListView.builder(
                     padding: const EdgeInsets.only(bottom: 8),
+                    buildDefaultDragHandles: false,
                     itemCount: selected.length,
+                    onReorder: onReorder ?? (_, __) {},
                     itemBuilder: (context, slot) {
                       final channel = log.channels[selected[slot]];
                       final range = _rangeOf(channel);
-                      return _SideRow(
-                        channel: channel,
-                        label: _labelFor(selected[slot]),
-                        colour: kTraceColors[slot % kTraceColors.length],
-                        current:
-                            cursor == null ? null : channel.valueAt(cursor!),
-                        min: range.min,
-                        max: range.max,
-                        valid: range.valid,
+                      return ReorderableDelayedDragStartListener(
+                        key: ValueKey<int>(selected[slot]),
+                        index: slot,
+                        child: _SideRow(
+                          channel: channel,
+                          label: _labelFor(selected[slot]),
+                          colour: kTraceColors[slot % kTraceColors.length],
+                          current:
+                              cursor == null ? null : channel.valueAt(cursor!),
+                          min: range.min,
+                          max: range.max,
+                          valid: range.valid,
+                        ),
                       );
                     },
                   ),
