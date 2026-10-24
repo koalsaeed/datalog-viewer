@@ -339,9 +339,7 @@ class _SelectedRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      unit.isEmpty
-                          ? range
-                          : (range.isEmpty ? unit : '$unit · $range'),
+                      range.isEmpty ? (unit.isEmpty ? '—' : unit) : range,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 10, color: kMuted),
@@ -351,7 +349,11 @@ class _SelectedRow extends StatelessWidget {
               ),
             ),
             Text(
-              channel.hasData ? formatValue(value) : '--',
+              channel.hasData
+                  ? (unit.isEmpty
+                      ? formatValue(value)
+                      : '${formatValue(value)} $unit')
+                  : '--',
               style: TextStyle(
                 fontSize: 12,
                 fontFeatures: const [FontFeature.tabularFigures()],

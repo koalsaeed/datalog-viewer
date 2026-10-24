@@ -26,6 +26,12 @@ String inferUnit(String name) {
   if (n.contains('%') || n.contains('percent') || n.contains('_pct')) {
     return '%';
   }
+  if (n.contains('throttle') || n.contains('tps')) return '%';
+  if (n.contains('load')) return '%';
+  if (n.contains('maf')) return 'g/s';
+  if (n.contains('pulse width') || n.contains('pulsewidth')) return 'ms';
+  if (n.contains('knock')) return '°';
+  if (n.contains('vvt') || n.contains('cam')) return '°';
 
   return '';
 }

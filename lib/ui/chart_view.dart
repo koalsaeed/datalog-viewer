@@ -31,6 +31,10 @@ class ChartView extends StatefulWidget {
     this.cursorLocked = false,
     this.onToggleLock,
     this.aliases = const <int, String>{},
+    this.initialStart,
+    this.initialEnd,
+    this.onViewport,
+    this.onEditChannels,
   });
 
   final VehicleLog log;
@@ -55,6 +59,12 @@ class ChartView extends StatefulWidget {
 
   /// Custom display names for channels.
   final Map<int, String> aliases;
+
+  /// Restores the viewport when this widget is rebuilt from scratch.
+  final double? initialStart;
+  final double? initialEnd;
+  final void Function(double start, double end)? onViewport;
+  final VoidCallback? onEditChannels;
 
   @override
   State<ChartView> createState() => _ChartViewState();
@@ -81,7 +91,17 @@ class _ChartViewState extends State<ChartView> {
   @override
   void initState() {
     super.initState();
-    _fit();
+    final savedStart = widget.initialStart;
+    final savedEnd = widget.initialEnd;
+    if (savedStart != null &&
+        savedEnd != null &&
+        savedEnd > savedStart &&
+        savedEnd <= widget.log.duration + 0.001) {
+      _start = savedStart;
+      _end = savedEnd;
+    } else {
+      _fit();
+    }
   }
 
   @override
@@ -288,6 +308,8 @@ class _ChartViewState extends State<ChartView> {
 
   @override
   Widget build(BuildContext context) {
+    widget.onViewport?.call(_start, _end);
+
     final chart = Expanded(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -419,6 +441,7 @@ class _ChartViewState extends State<ChartView> {
       cursor: widget.cursor,
       borderRight: widget.statsDock == StatsDock.left,
       aliases: widget.aliases,
+      onEdit: widget.onEditChannels,
     );
 
     return Row(
@@ -684,21 +707,19 @@ class _ChartPainter extends CustomPainter {
 
     final from = log.nearestIndex(start);
     final to = log.nearestIndex(end);
-    final visible = math.max(1, to - from + 1);
-    final step = math.max(1, (visible / (plot.width * 2)).ceil());
 
     if (laneMode) _paintLaneFrames(canvas, plot);
 
     // Dimmed traces first so the emphasised one sits on top.
     for (var slot = 0; slot < selected.length; slot++) {
       if (highlighted != null && selected[slot] == highlighted) continue;
-      _drawTrace(canvas, plot, span, slot, from, to, step,
+      _drawTrace(canvas, plot, span, slot, from, to,
           area: _areaFor(slot, plot),
           opacity: highlighted == null ? 1.0 : 0.18);
     }
     for (var slot = 0; slot < selected.length; slot++) {
       if (highlighted == null || selected[slot] != highlighted) continue;
-      _drawTrace(canvas, plot, span, slot, from, to, step,
+      _drawTrace(canvas, plot, span, slot, from, to,
           area: _areaFor(slot, plot), opacity: 1.0, width: 2.2);
     }
 
@@ -792,8 +813,7 @@ class _ChartPainter extends CustomPainter {
     double span,
     int slot,
     int from,
-    int to,
-    int step, {
+    int to, {
     required Rect area,
     required double opacity,
     double width = 1.5,
@@ -806,41 +826,85 @@ class _ChartPainter extends CustomPainter {
         ? base
         : base.withAlpha(((255 * opacity).round()).clamp(0, 255).toInt());
 
-    final path = Path();
-    var started = false;
-    var lastTime = double.negativeInfinity;
+    final visible = to - from + 1;
+    if (visible <= 0) return;
 
-    for (var i = from; i <= to; i += step) {
-      final value = channel.values[i];
-      final t = log.time[i];
-      if (!value.isFinite || !t.isFinite) {
-        started = false;
-        continue;
-      }
-      if (t - lastTime > log.gapSeconds) started = false;
-      lastTime = t;
-
-      final x = plot.left + ((t - start) / span).clamp(0.0, 1.0) * plot.width;
-      final y = _yForValue(channel, value, area);
-
-      if (started) {
-        path.lineTo(x, y);
-      } else {
-        path.moveTo(x, y);
-        started = true;
-      }
-    }
+    final columns = math.max(1, area.width.round());
 
     canvas.save();
     canvas.clipRect(area);
-    canvas.drawPath(
-      path,
-      Paint()
+
+    // Zoomed in far enough that every sample owns a pixel: draw them all.
+    if (visible <= columns) {
+      final paint = Paint()
         ..color = colour
         ..style = PaintingStyle.stroke
         ..strokeWidth = width
-        ..isAntiAlias = true,
-    );
+        ..isAntiAlias = true;
+
+      final path = Path();
+      var started = false;
+      var lastTime = double.negativeInfinity;
+
+      for (var i = from; i <= to; i++) {
+        final value = channel.values[i];
+        final t = log.time[i];
+        if (!value.isFinite || !t.isFinite) {
+          started = false;
+          continue;
+        }
+        if (t - lastTime > log.gapSeconds) started = false;
+        lastTime = t;
+
+        final x = area.left + ((t - start) / span) * area.width;
+        final y = _yForValue(channel, value, area);
+        if (started) {
+          path.lineTo(x, y);
+        } else {
+          path.moveTo(x, y);
+          started = true;
+        }
+      }
+
+      canvas.drawPath(path, paint);
+      canvas.restore();
+      return;
+    }
+
+    // Dense view: keep the min AND max of every pixel column, so a spike that
+    // lasts one sample still shows. Plain downsampling would erase it.
+    final mins = List<double>.filled(columns, double.infinity);
+    final maxs = List<double>.filled(columns, double.negativeInfinity);
+
+    for (var i = from; i <= to; i++) {
+      final value = channel.values[i];
+      final t = log.time[i];
+      if (!value.isFinite || !t.isFinite) continue;
+      var c = (((t - start) / span) * columns).floor();
+      if (c < 0) c = 0;
+      if (c >= columns) c = columns - 1;
+      if (value < mins[c]) mins[c] = value;
+      if (value > maxs[c]) maxs[c] = value;
+    }
+
+    final barPaint = Paint()
+      ..color = colour
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.0, width)
+      ..isAntiAlias = true;
+
+    for (var c = 0; c < columns; c++) {
+      if (!mins[c].isFinite) continue;
+      final x = area.left + (c + 0.5) * area.width / columns;
+      final yHigh = _yForValue(channel, maxs[c], area);
+      final yLow = _yForValue(channel, mins[c], area);
+      if ((yLow - yHigh).abs() < 0.8) {
+        canvas.drawLine(Offset(x, yHigh - 0.5), Offset(x, yHigh + 0.5), barPaint);
+      } else {
+        canvas.drawLine(Offset(x, yHigh), Offset(x, yLow), barPaint);
+      }
+    }
+
     canvas.restore();
   }
 
@@ -947,9 +1011,13 @@ class _ChartPainter extends CustomPainter {
         final base = kTraceColors[slot % kTraceColors.length];
         final dim = highlighted != null && !isHighlighted;
 
+        final unitLabel = channel.unit.isEmpty || channel.unit.length > 3
+            ? ''
+            : ' ${channel.unit}';
+
         final painter = TextPainter(
           text: TextSpan(
-            text: formatValue(value),
+            text: '${formatValue(value)}$unitLabel',
             style: TextStyle(
               color: dim ? base.withAlpha(90) : base,
               fontSize: 10,

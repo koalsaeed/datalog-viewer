@@ -180,6 +180,7 @@ class StatsSide extends StatelessWidget {
     required this.cursor,
     required this.borderRight,
     this.aliases = const <int, String>{},
+    this.onEdit,
   });
 
   final VehicleLog log;
@@ -189,6 +190,7 @@ class StatsSide extends StatelessWidget {
   final int? cursor;
   final bool borderRight;
   final Map<int, String> aliases;
+  final VoidCallback? onEdit;
 
   String _labelFor(int channelIndex) {
     final alias = aliases[channelIndex];
@@ -215,9 +217,22 @@ class StatsSide extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(12, 10, 12, 4),
-            child: Text('VALUES', style: kLabelStyle),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 4, 2),
+            child: Row(
+              children: [
+                const Text('VALUES', style: kLabelStyle),
+                const Spacer(),
+                if (onEdit != null)
+                  IconButton(
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.tune, size: 15),
+                    color: kMuted,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Rename / reorder',
+                  ),
+              ],
+            ),
           ),
           Expanded(
             child: selected.isEmpty

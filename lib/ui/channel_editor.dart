@@ -92,9 +92,11 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context).size;
+    final keyboard = MediaQuery.of(context).viewInsets.bottom;
 
     return AlertDialog(
       backgroundColor: kSurface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
       contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
       title: Row(
@@ -110,11 +112,19 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
             '${_order.length}',
             style: const TextStyle(fontSize: 11, color: kMuted),
           ),
+          if (keyboard > 0)
+            IconButton(
+              onPressed: () => FocusScope.of(context).unfocus(),
+              icon: const Icon(Icons.keyboard_hide, size: 18),
+              color: kAccent,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Hide keyboard',
+            ),
         ],
       ),
       content: SizedBox(
         width: media.width < 620 ? media.width * 0.86 : 560,
-        height: media.height < 460 ? media.height * 0.7 : 420,
+        height: (media.height - keyboard - 96).clamp(150.0, 430.0),
         child: _order.isEmpty
             ? const Center(
                 child: Text(
@@ -154,6 +164,9 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                             color: Colors.white,
                           ),
                           cursorColor: kAccent,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) =>
+                              FocusScope.of(context).unfocus(),
                           decoration: InputDecoration(
                             isDense: true,
                             hintText: channel.name,

@@ -75,6 +75,7 @@ class _ChannelPickerState extends State<_ChannelPicker> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context).size;
+    final keyboard = MediaQuery.of(context).viewInsets.bottom;
     final matches = _matches;
     final columns = media.width > 1100 ? 4 : (media.width > 760 ? 3 : 2);
 
@@ -85,7 +86,7 @@ class _ChannelPickerState extends State<_ChannelPicker> {
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 1180,
-          maxHeight: media.height - 24,
+          maxHeight: media.height - keyboard - 24,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -124,6 +125,14 @@ class _ChannelPickerState extends State<_ChannelPicker> {
                     icon: const Icon(Icons.close, size: 18),
                     color: kMuted,
                   ),
+                  if (keyboard > 0)
+                    IconButton(
+                      onPressed: () => FocusScope.of(context).unfocus(),
+                      icon: const Icon(Icons.keyboard_hide, size: 18),
+                      color: kAccent,
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Hide keyboard',
+                    ),
                 ],
               ),
             ),
@@ -132,6 +141,8 @@ class _ChannelPickerState extends State<_ChannelPicker> {
               child: TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
                 style: const TextStyle(fontSize: 13, color: Colors.white),
                 cursorColor: kAccent,
                 decoration: InputDecoration(

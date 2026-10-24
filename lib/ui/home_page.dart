@@ -53,6 +53,9 @@ class _HomePageState extends State<HomePage> {
   double _leftWidth = 300;
   double _topHeight = 210;
 
+  double? _savedStart;
+  double? _savedEnd;
+
   bool get _panelVisible => _panelOverride ?? true;
 
   PanelDock get _dock =>
@@ -196,6 +199,8 @@ class _HomePageState extends State<HomePage> {
       _hidden.clear();
       _aliases = <int, String>{};
       _cursor = log.sampleCount > 0 ? log.sampleCount ~/ 2 : null;
+      _savedStart = null;
+      _savedEnd = null;
     });
 
     _notify(
@@ -377,6 +382,13 @@ class _HomePageState extends State<HomePage> {
       aliases: _aliases,
       cursorLocked: _cursorLocked,
       onToggleLock: () => setState(() => _cursorLocked = !_cursorLocked),
+      initialStart: _savedStart,
+      initialEnd: _savedEnd,
+      onViewport: (start, end) {
+        _savedStart = start;
+        _savedEnd = end;
+      },
+      onEditChannels: _openChannelEditor,
     );
   }
 
