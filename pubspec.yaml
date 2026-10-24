@@ -1,5 +1,5 @@
 name: datalog_viewer
-description: A landscape datalog viewer for SCT LiveLink II CSV logs.
+description: A landscape datalog viewer for ECU and OBD log files.
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   file_selector: ^1.0.0
+  shared_preferences: ^2.2.0
 
 dev_dependencies:
   flutter_test:

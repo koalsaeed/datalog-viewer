@@ -11,6 +11,8 @@ class ChannelEdit {
 }
 
 /// Rename and reorder the channels that are currently on the chart.
+///
+/// Units are never edited here: they belong to the log file.
 Future<ChannelEdit?> showChannelEditor(
   BuildContext context, {
   required VehicleLog log,
@@ -45,23 +47,23 @@ class _ChannelEditorDialog extends StatefulWidget {
 
 class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
   late List<int> _order;
-  late Map<int, TextEditingController> _controllers;
-  late Map<int, String> _aliases;
+  late Map<int, TextEditingController> _names;
 
   @override
   void initState() {
     super.initState();
     _order = List<int>.from(widget.order);
-    _aliases = Map<int, String>.from(widget.aliases);
-    _controllers = <int, TextEditingController>{};
+    _names = <int, TextEditingController>{};
     for (final index in _order) {
-      _controllers[index] = TextEditingController(text: _aliases[index] ?? '');
+      _names[index] = TextEditingController(
+        text: widget.aliases[index] ?? '',
+      );
     }
   }
 
   @override
   void dispose() {
-    for (final controller in _controllers.values) {
+    for (final controller in _names.values) {
       controller.dispose();
     }
     super.dispose();
@@ -79,9 +81,10 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
   void _save() {
     final aliases = <int, String>{};
     for (final index in _order) {
-      final text = _controllers[index]?.text.trim() ?? '';
-      final original = widget.log.channels[index].name;
-      if (text.isNotEmpty && text != original) aliases[index] = text;
+      final name = _names[index]?.text.trim() ?? '';
+      if (name.isNotEmpty && name != widget.log.channels[index].name) {
+        aliases[index] = name;
+      }
     }
     Navigator.of(context).pop(ChannelEdit(order: _order, aliases: aliases));
   }
@@ -126,8 +129,7 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                 itemBuilder: (context, position) {
                   final index = _order[position];
                   final channel = widget.log.channels[index];
-                  final colour =
-                      kTraceColors[position % kTraceColors.length];
+                  final colour = kTraceColors[position % kTraceColors.length];
 
                   return Row(
                     children: [
@@ -146,7 +148,7 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                       ),
                       Expanded(
                         child: TextField(
-                          controller: _controllers[index],
+                          controller: _names[index],
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.white,
@@ -165,6 +167,13 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                           ),
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Text(
+                          channel.unit.isEmpty ? '—' : channel.unit,
+                          style: const TextStyle(fontSize: 11, color: kMuted),
+                        ),
+                      ),
                       IconButton(
                         onPressed: position == 0
                             ? null
@@ -178,7 +187,8 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                         onPressed: position == _order.length - 1
                             ? null
                             : () => _move(position, 1),
-                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                        icon:
+                            const Icon(Icons.keyboard_arrow_down, size: 18),
                         color: kMuted,
                         visualDensity: VisualDensity.compact,
                         tooltip: 'Move down',

@@ -6,10 +6,12 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/vehicle_log.dart';
 import '../parsers/csv_parser.dart';
+import '../services/app_prefs.dart';
 import '../services/log_loader.dart';
 import '../util/units.dart';
 import 'channel_editor.dart';
 import 'channel_panel.dart';
+import 'channel_picker.dart';
 import 'chart_view.dart';
 import 'landing_view.dart';
 import 'theme.dart';
@@ -55,6 +57,71 @@ class _HomePageState extends State<HomePage> {
 
   PanelDock get _dock =>
       _dockOverride ?? (_isNarrow ? PanelDock.top : PanelDock.left);
+
+  String _viewSignature = '';
+  DateTime _lastSave = DateTime.fromMillisecondsSinceEpoch(0);
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreView();
+  }
+
+  void _restoreView() {
+    final saved = AppPrefs.loadView();
+    if (saved.isEmpty) return;
+
+    _leftWidth = (saved['leftWidth'] as num?)?.toDouble() ?? _leftWidth;
+    _topHeight = (saved['topHeight'] as num?)?.toDouble() ?? _topHeight;
+    _panelOverride = saved['panel'] as bool? ?? _panelOverride;
+    _lanes = saved['lanes'] as bool? ?? _lanes;
+    _showStats = saved['stats'] as bool? ?? _showStats;
+    _showTags = saved['tags'] as bool? ?? _showTags;
+    _cursorLocked = saved['lock'] as bool? ?? _cursorLocked;
+
+    switch (saved['dock'] as String?) {
+      case 'left':
+        _dockOverride = PanelDock.left;
+        break;
+      case 'top':
+        _dockOverride = PanelDock.top;
+        break;
+    }
+    switch (saved['statsDock'] as String?) {
+      case 'left':
+        _statsDock = StatsDock.left;
+        break;
+      case 'right':
+        _statsDock = StatsDock.right;
+        break;
+      case 'bottom':
+        _statsDock = StatsDock.bottom;
+        break;
+    }
+  }
+
+  void _persistView() {
+    final signature = '$_dockOverride|$_panelOverride|$_leftWidth|$_topHeight|'
+        '$_lanes|$_showStats|$_statsDock|$_showTags|$_cursorLocked';
+    if (signature == _viewSignature) return;
+
+    final now = DateTime.now();
+    if (now.difference(_lastSave).inMilliseconds < 400) return;
+
+    _viewSignature = signature;
+    _lastSave = now;
+    AppPrefs.saveView(<String, dynamic>{
+      'dock': _dockOverride?.name,
+      'panel': _panelVisible,
+      'leftWidth': _leftWidth,
+      'topHeight': _topHeight,
+      'lanes': _lanes,
+      'stats': _showStats,
+      'statsDock': _statsDock.name,
+      'tags': _showTags,
+      'lock': _cursorLocked,
+    });
+  }
 
   Future<void> _openLog() async {
     setState(() {
@@ -210,8 +277,29 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _openPicker() async {
+    final log = _log;
+    if (log == null) return;
+
+    final result = await showChannelPicker(
+      context,
+      log: log,
+      picked: _selected,
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _selected
+        ..clear()
+        ..addAll(result.take(kTraceColors.length));
+      _hidden.removeWhere((index) => !_selected.contains(index));
+      if (_isolated != null && !_selected.contains(_isolated)) _isolated = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    _persistView();
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -325,6 +413,7 @@ class _HomePageState extends State<HomePage> {
       visibleOrder: _visible,
       aliases: _aliases,
       onEdit: _openChannelEditor,
+      onPickChannels: _openPicker,
       cursor: _cursor,
       onToggle: _toggleChannel,
       onToggleHidden: _toggleHidden,

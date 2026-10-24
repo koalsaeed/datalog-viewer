@@ -19,6 +19,7 @@ class ChannelPanel extends StatefulWidget {
     required this.visibleOrder,
     required this.aliases,
     required this.onEdit,
+    required this.onPickChannels,
     required this.cursor,
     required this.onToggle,
     required this.onToggleHidden,
@@ -44,6 +45,7 @@ class ChannelPanel extends StatefulWidget {
   final Map<int, String> aliases;
 
   final VoidCallback onEdit;
+  final VoidCallback onPickChannels;
 
   final int? cursor;
   final ValueChanged<int> onToggle;
@@ -96,17 +98,7 @@ class _ChannelPanelState extends State<ChannelPanel> {
             child: CustomScrollView(
               slivers: [
                 if (widget.selected.isNotEmpty) ...[
-                  _section(
-                    'IN CHART',
-                    '${widget.selected.length}',
-                    trailing: IconButton(
-                      onPressed: widget.onEdit,
-                      icon: const Icon(Icons.tune, size: 15),
-                      color: kMuted,
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'Rename / reorder',
-                    ),
-                  ),
+                  _section('IN CHART', '${widget.selected.length}'),
                   SliverReorderableList(
                     itemCount: widget.selected.length,
                     onReorder: widget.onReorder,
@@ -127,6 +119,10 @@ class _ChannelPanelState extends State<ChannelPanel> {
                           value: widget.cursor == null
                               ? null
                               : channel.valueAt(widget.cursor!),
+                          unit: channel.unit,
+                          range: channel.hasData
+                              ? '${formatValue(channel.min)}–${formatValue(channel.max)}'
+                              : '',
                           onToggleHidden: () =>
                               widget.onToggleHidden(channelIndex),
                           onIsolate: () => widget.onIsolate(channelIndex),
@@ -192,18 +188,27 @@ class _ChannelPanelState extends State<ChannelPanel> {
             style: const TextStyle(color: kMuted, fontSize: 11),
           ),
           const Spacer(),
+          IconButton(
+            onPressed: widget.onPickChannels,
+            icon: const Icon(Icons.add_circle_outline, size: 17),
+            color: kMuted,
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Add channels',
+          ),
+          IconButton(
+            onPressed: widget.selected.isEmpty ? null : widget.onEdit,
+            icon: const Icon(Icons.tune, size: 16),
+            color: widget.selected.isEmpty ? const Color(0xFF3A4452) : kMuted,
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Rename / reorder',
+          ),
           if (widget.selected.isNotEmpty)
-            TextButton(
+            IconButton(
               onPressed: widget.onClear,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                minimumSize: const Size(0, 28),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text(
-                'Clear',
-                style: TextStyle(fontSize: 11, color: kMuted),
-              ),
+              icon: const Icon(Icons.layers_clear, size: 16),
+              color: kMuted,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Clear all',
             ),
           IconButton(
             onPressed: widget.onClose,
@@ -264,6 +269,8 @@ class _SelectedRow extends StatelessWidget {
     required this.muted,
     required this.isolated,
     required this.value,
+    required this.unit,
+    required this.range,
     required this.onToggleHidden,
     required this.onIsolate,
   });
@@ -274,6 +281,8 @@ class _SelectedRow extends StatelessWidget {
   final bool muted;
   final bool isolated;
   final double? value;
+  final String unit;
+  final String range;
   final VoidCallback onToggleHidden;
   final VoidCallback onIsolate;
 
@@ -330,7 +339,11 @@ class _SelectedRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      channel.unit.isEmpty ? '—' : channel.unit,
+                      unit.isEmpty
+                          ? range
+                          : (range.isEmpty ? unit : '$unit · $range'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 10, color: kMuted),
                     ),
                   ],

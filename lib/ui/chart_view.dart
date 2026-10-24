@@ -119,8 +119,17 @@ class _ChartViewState extends State<ChartView> {
 
     final span = _end - _start;
     final newSpan = (span * factor).clamp(_minSpan, duration).toDouble();
-    final center = (_start + _end) / 2;
-    final newStart = (center - newSpan / 2)
+
+    // Zoom around whatever the user is reading: the cursor when it is in view.
+    var anchor = (_start + _end) / 2;
+    final cursor = widget.cursor;
+    if (cursor != null && cursor >= 0 && cursor < widget.log.sampleCount) {
+      final t = widget.log.time[cursor];
+      if (t.isFinite && t >= _start && t <= _end) anchor = t;
+    }
+
+    final fraction = ((anchor - _start) / span).clamp(0.0, 1.0).toDouble();
+    final newStart = (anchor - fraction * newSpan)
         .clamp(0.0, math.max(0.0, duration - newSpan))
         .toDouble();
 

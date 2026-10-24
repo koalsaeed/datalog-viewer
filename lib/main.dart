@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'services/app_prefs.dart';
 import 'ui/home_page.dart';
 import 'ui/theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppPrefs.init();
   // The viewer is landscape-only, and only the two landscape directions.
   SystemChrome.setPreferredOrientations(const <DeviceOrientation>[
     DeviceOrientation.landscapeLeft,
@@ -29,7 +31,7 @@ class DatalogViewerApp extends StatelessWidget {
     );
 
     return MaterialApp(
-      title: 'Datalog Viewer',
+      title: 'PWP datalogger',
       debugShowCheckedModeBanner: false,
       theme: base.copyWith(
         scaffoldBackgroundColor: kBackground,
