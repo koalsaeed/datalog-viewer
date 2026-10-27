@@ -67,12 +67,15 @@ Moving it to PWP Tune later means copying `lib/viewer/`, adding the
 - **Navigator (40 px):** the minimap and the visible window in one strip. Dragging the
   window pans, tapping elsewhere centres the view there. It replaces the
   minimap, the pan bar and the ◀ ▶ buttons.
-- **Channels drawer:** slides over the chart from the left (300 px). It has
+- **Channels drawer:** opens from the left (300 px). A pin button in its
+  header docks it beside the chart (the chart narrows and stays fully visible);
+  unpinned it floats over the chart with a scrim. `☰` and the drawer's `‹`
+  button hide and show it in both modes, and the pin state is remembered. It has
   two sections: *In chart* (drag to reorder, eye to hide, tap the colour dot to isolate,
   ⋯ to rename/remove) and *All channels* (search, tap to add). It replaces
   the docked panel, the full-screen picker and the rename dialog.
 
-Removed as duplicates: docked panel and dock switching, bottom stats bar,
+Removed as duplicates: top docking and dock switching, bottom stats bar,
 side VALUES column, pan bar, ＋/− buttons, cursor lock, focus mode,
 full-screen channel picker, separate channel editor dialog.
 
@@ -111,10 +114,13 @@ Dark, high-contrast, one accent colour. `ViewerTheme.pwp`:
 | border | `#252E39` | grid, dividers |
 | text | `#E7EBF0` | primary text |
 | muted | `#8A96A6` | secondary text |
-| accent | `#FF6A1A` | PWP orange: active icons, cursor tag, navigator window |
+| accent | `#E31B23` | PWP red: active icons, cursor tag, navigator window |
 
 Trace palette (8, chosen to read on the dark background and to differ from each other):
-`#38BDF8 #F87171 #4ADE80 #FACC15 #C084FC #2DD4BF #F472B6 #FB923C`.
+`#38BDF8 #4ADE80 #FACC15 #C084FC #2DD4BF #F472B6 #FB923C #CBD5E1`
+(no red, so traces never compete with the brand accent).
+
+Clickable prototype: https://claude.ai/artifact/LX5ane67KcZScjvz7jBmTP
 
 Numbers use tabular figures. The cursor is a thin white line with an accent time tag.
 The grid is lighter than now (dotted, 4 vertical divisions).
