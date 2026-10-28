@@ -19,10 +19,33 @@ files we generated ourselves.
 | RomRaider, Woolich, MHD, Motorsport Electronics, BlueDriver (UTF-16), OBDLink, Torque, RaceChrono, DynamicEFI, Honda TuningStudio, MegaSquirt CSV | generic CSV | Real logs from UltraLog's examples | All open with sensible durations and channel ranges |
 | Racelogic `.vbo` | `[column names]` | Self-made file; layout checked against `quentinsf/vboxutils` | **No real file found online** |
 
-Not read yet (binary, would need their own reverse engineering): Link
-`.llg`/`.llg5`, AiM `.xrk`, ECUMaster `.emuprolog.gz`, Emerald `.lg1`/`.lg2`,
-DynamicEFI `.dat`, Haltech's native NSP log file (only its CSV export),
-MaxxECU `.MaxxECU-Zip-log` (a zip; needs unzip support).
+| AiM `.xrk` / `.xrz` | `<hCNF` / zlib | 9 test files of `m3rlin45/libxrk` + `pyxrk` + 3 BMW Thunderhill logs | 106/106 checks: channel sets, sample counts, values and lap boundaries against libxrk's DLL-derived expectations; RaceStudio CSV exports agree within CSV rounding; .xrk and .xrz decode bit-identically |
+| ECUMaster EMU Black `.emublog` | gzip, 308-byte records | `sample_cruise` + `220kpa` | 19,500 values vs emublog2mlv's reference `.msl`, 0 mismatches |
+| ECUMaster EMU PRO `.emuprolog.gz` | gzip → `ef 65 6d 6c` | 3 real logs + ECUMaster's own CSV exports of the same sessions | 3.8 M values, 0 mismatches; frame model predicts all 347,000 frames |
+| Link `.llg` / `.llg5` | `lf3` | 4 real logs (G4+ and G5) | Parses byte-exact to EOF; no reference export exists, values checked for physical plausibility |
+| FuelTech `.ftml` | raw DEFLATE → .NET BinaryFormatter | 2 real FT450 logs + the reference CSV made with FTManager's own libraries | All 33 columns identical on the WOT log; second log within 0.55 % of FTManager's export |
+
+Readers for these binary formats live in `prototype/readers/` (plain JS,
+port to Dart for the app). Their licence notices are in
+`prototype/readers/THIRD_PARTY_NOTICES.txt`.
+
+Known limits:
+- **Link:** units rest on plausibility only (°C and km/h are not strictly
+  proven). One G5 log ends with ~0.8 s where every channel holds another
+  channel's bytes; the viewer drops that tail and says so.
+- **AiM:** one undocumented expansion-message variant is skipped (3.4 KB of
+  19 MB in one BMW file); some unconnected sensors read nonsense.
+- **ECUMaster EMU PRO:** only 5 of the CSV-checked channels vary, so the other
+  ~400 rest on the exact frame-length model and cross-checks; gaps longer than
+  1 s are not detectable; custom 8-bit user channels keep generic names.
+  The largest log (143 MB inflated) needs ~450 MB of memory while parsing,
+  which is a risk on phones.
+- **FuelTech:** `.ftl` (older FTManager) is not covered (no samples found);
+  units assume FTManager's default unit settings.
+
+Not read yet: Emerald `.lg1`/`.lg2`, DynamicEFI `.dat`, Haltech's native NSP
+log file (only its CSV export), MaxxECU `.MaxxECU-Zip-log` (a zip; needs unzip
+support), ECUMaster `.emublog3` (EMU Black V3).
 
 ## Haltech NSP scaling
 
