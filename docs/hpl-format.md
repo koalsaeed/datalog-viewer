@@ -7,6 +7,18 @@ anything marked *unverified*.
 
 All integers are little-endian.
 
+## Two variants
+
+| | Newer (F-150 sample) | Older (2019 Mustang sample) |
+|---|---|---|
+| File start | `SS\0\0SYNC` | `HPT ` + u16 (`0x0760`) + `SS\0\0sync` |
+| Block marker | `SS\0\0SYNC` | `SS\0\0sync` |
+| Data | raw-deflate `CDG` blocks with a record count | records stored as is, straight after the channel table and after each `sync` marker + 5 header bytes, up to the next marker |
+| Channel names | empty | stored (e.g. `Engine RPM (SAE)`) |
+
+The channel table and the record layout are identical in both. The rest of
+this section describes the newer variant's blocks.
+
 ## Blocks
 
 The file is a sequence of blocks. Each one starts with the 8-byte marker
@@ -30,7 +42,7 @@ then, per channel:
      u32  channel ID
      f64  divisor
      f64  offset
-     u8   (0 in every channel seen)
+     u8   name length, then name text (empty in the newer variant)
      u8   unit length, then unit text (UTF-8, e.g. "rpm", "λ", "°C")
      u16  slot of the next channel (absent after the last one)
 ```
@@ -91,5 +103,10 @@ channel by channel with the decoded `.hpl`:
 ## Reference implementation
 
 `parseHpl()` in the clickable prototype
-(https://claude.ai/artifact/LX5ane67KcZScjvz7jBmTP) decodes the sample log in
-about 0.3 s in a browser and resamples to a shared 20 Hz time axis.
+(https://claude.ai/artifact/LX5ane67KcZScjvz7jBmTP) reads both variants and
+resamples to a shared 20 Hz time axis (F-150 log: about 0.2 s, Mustang log:
+about 25 ms). It carries its own raw-deflate decoder, because the browser's
+`DecompressionStream` hung in at least one in-app browser.
+
+Names learned from an older-variant file, from a VCM Scanner CSV export, or
+typed in by the user are saved by channel number and reused for every log.
