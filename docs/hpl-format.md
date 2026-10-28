@@ -38,8 +38,15 @@ then, per channel:
 Value = raw / divisor + offset (e.g. `1.28, -100` is the OBD fuel-trim formula).
 
 **Channel names are not stored.** The file holds only the IDs; VCM Scanner
-looks the names up in its own database. Names have to come from elsewhere
-(a VCM Scanner CSV export of the same log is the obvious source).
+looks the names up in its own database. The low 16 bits of the ID are VCM
+Scanner's channel number, which is the number its CSV export writes in the
+`[Channel Information]` row (e.g. ID `0x04380857` → `2135` = Engine RPM).
+`assets/hpt_channels.json` maps channel numbers to names; it was built from
+the CSV export of the sample log and grows with every new export.
+
+The middle byte of the ID tracks the unit (`0x38` rpm, `0xEE` λ, `0x9C` %,
+`0x5B` kPa, `0xF1` °C …). Units in the `.hpl` are always metric; VCM
+Scanner's CSV converts to the user's display units (psi, °F, lb·ft, mph).
 
 The top byte of the channel ID gives the value type:
 
@@ -66,6 +73,20 @@ per record:
 
 Records are change-only and their times are not strictly ordered inside a
 block, so a reader sorts each channel's events by time and holds the last value.
+
+## Validation against VCM Scanner
+
+The CSV export of the same log (`[Channel Data]`, 23 672 rows) was compared
+channel by channel with the decoded `.hpl`:
+
+- All 79 channel numbers match, in table order.
+- Numeric channels correlate at r ≈ 0.99–1.00, once VCM's unit conversion is
+  applied (kPa→psi ×0.145, °C→°F, N·m→lb·ft ×0.7376, m/s→mph ×2.237,
+  lb/min→lb/h ×60).
+- Text channels (gear, shift state, torque source …) match 96–100 % of rows.
+- Lower correlations only appear on slow, sparse channels (fuel lift pump
+  actual, oil pressure, VCT mapped-point weights). VCM interpolates those
+  between samples; this reader holds the last value.
 
 ## Reference implementation
 
