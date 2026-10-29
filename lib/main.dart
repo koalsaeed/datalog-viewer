@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
@@ -49,7 +50,8 @@ class _ViewerPageState extends State<ViewerPage> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0D0F12));
+      ..setBackgroundColor(const Color(0xFF0D0F12))
+      ..addJavaScriptChannel('PWPApp', onMessageReceived: _onPageMessage);
 
     final platform = _controller.platform;
     if (platform is AndroidWebViewController) {
@@ -58,6 +60,31 @@ class _ViewerPageState extends State<ViewerPage> {
     }
     _controller.loadFlutterAsset('assets/viewer/index.html');
   }
+
+  /// "Open log…" in the page posts 'open'. The files are picked natively and
+  /// streamed into the page as base64 chunks, which does not depend on the
+  /// WebView's own <input type="file"> handling.
+  Future<void> _onPageMessage(JavaScriptMessage message) async {
+    if (message.message != 'open') return;
+    try {
+      final files = await openFiles();
+      for (final f in files) {
+        await _controller.runJavaScript('__pwpReceive.begin(${jsonEncode(f.name)})');
+        final bytes = await f.readAsBytes();
+        for (var o = 0; o < bytes.length; o += _chunkBytes) {
+          final end = o + _chunkBytes < bytes.length ? o + _chunkBytes : bytes.length;
+          await _controller.runJavaScript(
+              "__pwpReceive.chunk('${base64Encode(bytes.sublist(o, end))}')");
+        }
+      }
+      await _controller.runJavaScript('__pwpReceive.done()');
+    } catch (e) {
+      await _controller.runJavaScript('__pwpReceive.fail(${jsonEncode('$e')})');
+    }
+  }
+
+  /// 384 KB per call keeps each JavaScript string small.
+  static const _chunkBytes = 393216;
 
   /// Answers the page's <input type="file"> with the system file picker.
   /// Any file type is allowed: logs come as .hpl, .ld, .xrk, .ftml, … which

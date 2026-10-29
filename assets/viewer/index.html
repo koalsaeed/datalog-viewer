@@ -2614,9 +2614,14 @@ const HPL_B64 = "";
   $('bMore').onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; };
   document.addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && e.target.closest('#bMore') == null) menu.hidden = true; });
   $('mTags').onclick = () => { S.tags = !S.tags; $('tagsChk').textContent = S.tags ? 'ON' : 'OFF'; draw(); };
-  $('mOpen').onclick = () => { menu.hidden = true; $('fileIn').value = ''; $('fileIn').click(); };
-  $('fileIn').onchange = async () => {
-    const files = [...$('fileIn').files]; if (!files.length) return;
+  $('mOpen').onclick = () => {
+    menu.hidden = true;
+    if (window.PWPApp) { PWPApp.postMessage('open'); return; }       // Android app: native file picker
+    $('fileIn').value = ''; $('fileIn').click();
+  };
+  $('fileIn').onchange = () => openPicked([...$('fileIn').files]);
+  async function openPicked(files) {
+    if (!files.length) return;
     const lg1 = files.find(f => /\.lg1$/i.test(f.name));
     if (lg1) {                                                   // Emerald: data in .lg1, channel list in .lg2
       const base = lg1.name.replace(/\.lg1$/i, '').toLowerCase();
@@ -2628,6 +2633,25 @@ const HPL_B64 = "";
     }
     const f = files.find(x => !/\.lg2$/i.test(x.name)) || files[0];
     await openLog(() => f.arrayBuffer(), f.name);
+  }
+  const incoming = [];
+  window.__pwpReceive = {
+    begin(name) { incoming.push({ name, parts: [] }); $('loading').hidden = false; $('loading').textContent = `Reading ${name}…`; },
+    chunk(b) {
+      const s = atob(b), u = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+      incoming[incoming.length - 1].parts.push(u);
+    },
+    done() {
+      const files = incoming.splice(0).map(f => {
+        const n = f.parts.reduce((a, q) => a + q.length, 0), u = new Uint8Array(n);
+        let o = 0; for (const q of f.parts) { u.set(q, o); o += q.length; }
+        return { name: f.name, arrayBuffer: async () => u.buffer, text: async () => new TextDecoder().decode(u) };
+      });
+      if (!files.length) { $('loading').hidden = !!channels; return; }
+      openPicked(files);
+    },
+    fail(msg) { incoming.length = 0; $('loading').hidden = !!channels; toast(`Could not read the file: ${msg}`); },
   };
   $('mUnits').onclick = () => {
     unitSystem = { file: 'metric', metric: 'imperial', imperial: 'file' }[unitSystem];
