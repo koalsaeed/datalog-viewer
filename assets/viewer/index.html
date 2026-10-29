@@ -85,7 +85,7 @@ body {
 }
 .tnow em { font-style: normal; color: var(--accent); margin-inline-end: 5px; }
 
-.body { position: relative; flex: 1; min-height: 0; }
+.body { position: relative; flex: 1; min-height: 0; isolation: isolate; }   /* keeps the channel strip under the drawer and menus */
 .body canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
 .nav { height: 40px; flex: none; position: relative; background: var(--surface); border-top: 1px solid var(--border); }
 .nav canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; cursor: grab; }
@@ -150,7 +150,8 @@ body {
 .row.add { cursor: pointer; }
 .row.add:hover { background: var(--raised); }
 .row.add .nm { color: var(--muted); }
-.row.add .rng { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.row.add .val { font-size: 12px; font-weight: 500; color: var(--muted); }
+.row.add.flat .val { color: var(--faint); }
 .row.add.flat .nm { color: var(--faint); }
 .plus { color: var(--accent); width: 22px; display: grid; place-items: center; flex: none; }
 .plus svg { width: 15px; height: 15px; }
@@ -205,7 +206,7 @@ body {
 </style>
 
 <div class="stage">
-  <div class="caption"><b><i></i>PWP Datalogger</b><span>v11</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
+  <div class="caption"><b><i></i>PWP Datalogger</b><span>v12</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
 
   <div class="fit" id="fit">
     <div class="phone-holder" id="holder">
@@ -2159,12 +2160,8 @@ const HPL_B64 = "";
     gap = Math.max(0.02, medianDt * 3);
     minSpan = Math.max(medianDt * 20, 0.2);
     Object.assign(S, { sel: [], hidden: new Set(), alias: {}, iso: null, start: 0, end: duration, yTop: 0, ySpan: 1, cursor: Math.floor(N / 2), openRow: null, renaming: null, marked: new Set() });
-    // Auto-pick on open, same priority list as the app.
-    for (const key of [/\brpm\b/, /boost/, /manifold absolute|\bmap\b/, /\bafr\b/, /lambda|lambse|equivalence ratio|eq ratio/, /throttle angle$|throttle|\btps\b/, /timing|spark advance/, /knock/, /speed/, /\bmaf\b/, /load/]) {
-      if (S.sel.length >= 4) break;
-      const i = channels.findIndex(c => c.has && key.test(c.name.toLowerCase()));
-      if (i >= 0 && !S.sel.includes(i)) S.sel.push(i);
-    }
+    // Standard set on open: RPM, throttle, short-term trim, spark, knock, lambda/AFR, load.
+    S.sel = pickStandard(channels);
     if (S.sel.length < 2) channels.map((c, i) => i).filter(i => channels[i].has && !S.sel.includes(i)).slice(0, 3 - S.sel.length).forEach(i => S.sel.push(i));
     S.lanes = S.sel.length >= 3;
     document.getElementById('bLanes').classList.toggle('on', S.lanes);
@@ -2185,6 +2182,39 @@ const HPL_B64 = "";
     if (a >= 1000) return Math.round(v).toLocaleString('en-US').replace(/,/g, ' ');
     if (a >= 100) return v.toFixed(1);
     return v.toFixed(2);
+  }
+  // Standard channels picked on open. Each group: rules best-first, plus exclusions.
+  const STANDARD = [
+    { g: 'RPM', rules: [/^(ecu |e)?(eng(ine)? ?)?rpm( sae)?$|^engine speed$/, /\brpm\b|engine speed/],
+      not: /target|limit|idle|error|delta|shaft|trans|rate|clamp|cut|launch|cruise|blip|als|index|valid|condition|sync|tm\d|vrpm|threshold|roc|derivative|dot|ignition|mapx|unfiltered|\bd ?rpm|counter|matching|film|loops|tpu|eaa|zero|too|\bis\b/ },
+    { g: 'Throttle', rules: [/^(tps|tps ?1|tp|throttle|throttle (position|pos|angle|pct)( 1| sae)?|throttle pos|thr pos|tps main|tp main|sensors tps1|ecu throttle)$/, /\btps\b|\bthrottle (position|pos|angle)\b|\btp main\b/, /accelerator pedal|pedal pos/],
+      not: /target|desired|error|delta|dot|raw|voltage|adc|split|rate|derivative|sub|cal|limit|\bae\b|accum|blip|invalid|low|high|status|diag|relative|commanded|mult|check|brake|source|index|gear/ },
+    { g: 'STFT', rules: [/short term fuel trim bank 1|^stft ?1$|bank 1 short term fuel trim/, /short term (fuel )?trim|\bstft\b/, /^gego$|\bego ?cor|^o2 corr|^o2 correction$|cl lambda fuel corr|closed loop.*(corr|trim)|lambda (corr|trim)|o2 control bank 1 output|^ecu inj cor lam$|fuel trim/],
+      not: /long|\bltt|ltft|cyl|status|index|idle|boost|knock|secondary|state|pid|target|delay|ae / },
+    { g: 'Spark', rules: [/^((ignition|ign|spark) ?(angle|timing|advance|adv)|timing advance|advance( 1)?|ignition adv angle|ign final|eng ign|timing ignition|ignition timing|advance current|ign advance)$/, /ignition angle|ignition timing|timing advance|spark advance|\bign(ition)? adv|\badvance\b|ign timing cyl 1|ignition angle cylinder1/],
+      not: /cam|knock|base|add|limiter|als|table|mod\b|sec\b|clt|iat|cranking|idle|overrun|source|correction|cut|dwell|injector|scatter|ac ctrl|lua|load|target/ },
+    { g: 'Knock', rules: [/knock(ing)? retard|knock correction|knock control bank 1 ignition correction|ign adv knock mod|knock max retard/, /knock (current )?level|knock lvl|knock count|knock reading|knock sensor$|knock level 1|knock signal|knock acc lvl|knock level global/, /knock/],
+      not: /raw|scaling|threshold|window|spectrum|freq|status|octane|chip|time|channel|fuel trim|clt|integrator time|fuel knock|cylinders/ },
+    { g: 'Lambda/AFR', rules: [/^(lambda|afr|wb|o2|lambda ?1|afr 1|lambda avg|afr avg|lambda bank 1|ecu lambda|wb 0|lambda ext afr|wbo2 curr afr|wb eq ratio bank 1|wideband o2( overall| 1)?|sensors lambda1|plx o2 wideband|o2 val|measured lambda|lambda measured|afratio|exhaust o2)$/, /\b(lambda|afr|wb ?eq ratio|wideband|wbo2)\b/],
+      not: /target|trgt|desired|commanded|corr|trim|error|status|temp|diag|heater|stoich|mod\b|req|index|table|monitor|good|delay|minimum|base|unfiltered|voltage|raw|controller|cut|time|axis|pid|overlay|ovrly/ },
+    { g: 'Load', rules: [/^((engine |air |calculated |absolute )?load( value)?( sae)?|load (actual|abs)|fuel ?load( map)?|primary load|engine efficiency load|ecu load cell)$/, /\bload\b/, /^(map|manifold (absolute )?pres(sure)?|sensors map|measured manifold pressure|instant map|effective map|plx manifold absolute pressure)$/, /\bmap\b|manifold (absolute )?pressure/, /\bmaf\b/],
+      not: /cpu|req|derivative|transient|\bsec\b|mod\b|hours|ignition|rate|start|target|limit|delta|raw|voltage|error|correction|estimate|predicted|seems|active|sel|shift|prev|boost|table|\bcl\b|temp|2/ },
+  ];
+  const norm = s => s.replace(/([0-9])([A-Z])/g, '$1 $2').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').toLowerCase().replace(/[_\/.:\-#()\[\]]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/ index$/, '');
+  function pickStandard(chs) {   // chs: [{name, has}]
+    const names = chs.map(c => norm(c.name)), out = [];
+    for (const grp of STANDARD) {
+      let hit = -1;
+      for (const pass of [true, false]) {              // varying channels first, then flat ones
+        for (const r of grp.rules) {
+          hit = names.findIndex((n, i) => chs[i].has === pass && r.test(n) && !grp.not.test(n) && !out.includes(i));
+          if (hit >= 0) break;
+        }
+        if (hit >= 0) break;
+      }
+      if (hit >= 0) out.push(hit);
+    }
+    return out;
   }
   function fmtCh(ch, v) {
     if (ch.labels) { const k = Math.round(v); return isFinite(v) && ch.labels[k] != null ? ch.labels[k] : '--'; }
@@ -5644,10 +5674,13 @@ function parseDynamicEfi(buf, name) {
     }
   }
   function syncInValues() {
-    document.querySelectorAll('[data-val]').forEach(el => {
-      const ch = channels[+el.dataset.val];
-      el.innerHTML = `${esc(fmtCh(ch, ch.v[S.cursor]))}${ch.unit ? `<small>${esc(ch.unit)}</small>` : ''}`;
-    });
+    if (!drawer.classList.contains('open')) return;              // the readings are only visible in the panel
+    for (const el of drawer.querySelectorAll('[data-val]')) {
+      const ch = channels[+el.dataset.val], s = fmtCh(ch, ch.v[S.cursor]);
+      if (el._shown === s) continue;                             // ALL CHANNELS can hold hundreds of rows
+      el._shown = s;
+      el.innerHTML = `${esc(s)}${ch.unit ? `<small>${esc(ch.unit)}</small>` : ''}`;
+    }
   }
   // Long press marks a channel: thicker, glowing, drawn on top. Press again to unmark.
   let lpFired = false;
@@ -5723,8 +5756,9 @@ function parseDynamicEfi(buf, name) {
     $('allList').innerHTML = list.map(i => {
       const ch = channels[i];
       const rng = ch.labels ? esc(ch.labels.slice(0, 3).join(' / ') + (ch.labels.length > 3 ? ' …' : '')) : ch.has ? `${fmt(ch.min)}–${fmt(ch.max)}` : 'flat';
-      return `<div class="row add${ch.has ? '' : ' flat'}" data-add="${i}" title="${full ? 'Chart is full (8). The oldest channel is replaced.' : 'Add to chart'}"><span class="plus">${ICON.plus}</span><span class="nm">${esc(ch.name)}</span><span class="rng">${rng}${ch.unit ? ' ' + esc(ch.unit) : ''}</span></div>`;
+      return `<div class="row add${ch.has ? '' : ' flat'}" data-add="${i}" title="${full ? 'Chart is full (8). The oldest channel is replaced.' : 'Add to chart'}"><span class="plus">${ICON.plus}</span><span class="nm" title="${esc(ch.name)} · ${rng}${ch.unit ? ' ' + esc(ch.unit) : ''}">${esc(ch.name)}</span><span class="val" data-val="${i}"></span></div>`;
     }).join('');
+    syncInValues();
   }
   $('allList').addEventListener('click', e => {
     const r = e.target.closest('[data-add]'); if (!r) return;

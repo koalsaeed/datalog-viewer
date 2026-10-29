@@ -58,6 +58,18 @@ Known limits:
 Not read yet: Haltech's native NSP log file (only its CSV export), ECUMaster
 `.emublog3` (EMU Black V3), FuelTech `.ftl`.
 
+## Standard channels on open
+
+Every log opens with the same seven channels, in this order, when the log has
+them: RPM, throttle (TPS), short-term fuel trim, spark advance, knock,
+measured lambda/AFR, load (MAP, then MAF, when there is no load channel).
+Names differ per ECU, so each group has match rules, best first, and
+exclusions such as target/desired/limit/raw. Names are normalised first
+(`TPSIndex` → `tps`, `fuel/shortTermTrim` → `fuel short term trim`), and
+channels that change in the log win over flat ones. Checked against all
+76 sample logs; e.g. HP Tuners: Engine RPM, Throttle Angle, Short Term Fuel
+Trim Bank 1, Timing Advance, Knock Correction, WB EQ Ratio Bank 1, Air Load.
+
 ## Haltech NSP scaling
 
 Values are integers in each `Type`'s base unit:
