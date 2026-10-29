@@ -25,6 +25,10 @@ files we generated ourselves.
 | Link `.llg` / `.llg5` | `lf3` | 4 real logs (G4+ and G5) | Parses byte-exact to EOF; no reference export exists, values checked for physical plausibility |
 | FuelTech `.ftml` | raw DEFLATE → .NET BinaryFormatter | 2 real FT450 logs + the reference CSV made with FTManager's own libraries | All 33 columns identical on the WOT log; second log within 0.55 % of FTManager's export |
 
+| DynamicEFI / EBL Flash `.dat` | `TIME: … [ID]` text header + 277-byte frames | 1 real log + the tool's own CSV export | 28 of 30 mapped columns exact on all 1,030 rows; RPM 93.4 % exact / 98.6 % within one 12.5 rpm step; DC% 98.5 % |
+| Emerald `.lg1` + `.lg2` | name `.lg1`; 24-byte records | 4 real MG ZS Turbo logs | Structure exact. Confident: RPM, coolant, MAP (bar/kPa from `[ValU]`), air temp, throttle. Raw/unknown scaling: AFR/λ sensor, ignition, several IDs. No public ID table exists |
+| MaxxECU `.MaxxECU-Zip-log` and any zipped log | `PK\3\4` | Self-built zips (deflate and stored) + the real DynamicEFI `.dat.zip` | Opens the log inside, skips the `.MaxxECU-save` tune |
+
 Readers for these binary formats live in `prototype/readers/` (plain JS,
 port to Dart for the app). Their licence notices are in
 `prototype/readers/THIRD_PARTY_NOTICES.txt`.
@@ -43,9 +47,16 @@ Known limits:
 - **FuelTech:** `.ftl` (older FTManager) is not covered (no samples found);
   units assume FTManager's default unit settings.
 
-Not read yet: Emerald `.lg1`/`.lg2`, DynamicEFI `.dat`, Haltech's native NSP
-log file (only its CSV export), MaxxECU `.MaxxECU-Zip-log` (a zip; needs unzip
-support), ECUMaster `.emublog3` (EMU Black V3).
+- **Emerald:** a log is two files; pick both (the file picker allows several).
+  With only the `.lg1` you get raw slot values. The `.lg2` describes the slots
+  when the log was saved; if slots were changed during recording, earlier data
+  is mislabelled (seen in one sample). Unknown IDs: 12, 15, 17, 29, 47.
+- **DynamicEFI:** offsets come from one EBL Flash layout; other ECM
+  definitions may differ. Channels that were constant in the sample (INT, BLM,
+  several flags) are not mapped. °C / km/h branches are untested.
+
+Not read yet: Haltech's native NSP log file (only its CSV export), ECUMaster
+`.emublog3` (EMU Black V3), FuelTech `.ftl`.
 
 ## Haltech NSP scaling
 
