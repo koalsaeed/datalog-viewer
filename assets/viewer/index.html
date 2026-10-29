@@ -206,7 +206,7 @@ body {
 </style>
 
 <div class="stage">
-  <div class="caption"><b><i></i>PWP Datalogger</b><span>v14</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
+  <div class="caption"><b><i></i>PWP Datalogger</b><span>v15</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
 
   <div class="fit" id="fit">
     <div class="phone-holder" id="holder">
@@ -2447,7 +2447,7 @@ const HPL_B64 = "";
   let legendKey = '';
   function legend(vis) {
     const box = $('legend');
-    box.hidden = S.lanes || !vis.length;
+    box.hidden = S.lanes || !vis.length || $('screen').classList.contains('docked');   // a pinned panel already lists them
     if (box.hidden) return;
     const key = vis.join(',') + '|' + S.iso + '|' + [...S.marked].join(',') + '|' + vis.map(label).join('|');
     if (key !== legendKey) {
@@ -5630,6 +5630,7 @@ function parseDynamicEfi(buf, name) {
     $('bPin').classList.toggle('on', pinned);
     $('bPin').title = pinned ? 'Unpin panel (float over the chart)' : 'Pin panel next to the chart';
     if (open) renderDrawer();
+    draw();                                                      // the strip above the chart hides while the panel is pinned
   }
   $('bPin').onclick = () => {
     pinned = !pinned;
