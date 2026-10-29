@@ -46,6 +46,9 @@ jobs:
           done
           sed -i 's/android:label="[^"]*"/android:label="PWP datalogger"/' android/app/src/main/AndroidManifest.xml
           grep -o 'android:label="[^"]*"' android/app/src/main/AndroidManifest.xml
+          # The viewer page loads its fonts from Google Fonts.
+          sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' android/app/src/main/AndroidManifest.xml
+          grep -c 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml
 
       - name: Resolve dependencies
         run: flutter pub get
