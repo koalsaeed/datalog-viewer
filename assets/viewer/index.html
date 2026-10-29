@@ -206,7 +206,7 @@ body {
 </style>
 
 <div class="stage">
-  <div class="caption"><b><i></i>PWP Datalogger</b><span>v13</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
+  <div class="caption"><b><i></i>PWP Datalogger</b><span>v14</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
 
   <div class="fit" id="fit">
     <div class="phone-holder" id="holder">
@@ -5651,7 +5651,7 @@ function parseDynamicEfi(buf, name) {
   };
   const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  function renderDrawer() { if (!channels) return; renderIn(); renderAll(); }   // the panel can be pinned open before a log loads
+  function renderDrawer() { if (!channels) return; renderAll(); renderIn(); }   // ALL CHANNELS first: renderIn fills the readings of both lists   // the panel can be pinned open before a log loads
   function renderIn() {
     const box = $('inList');
     $('inCount').textContent = `${S.sel.length} / 8`;
@@ -5681,7 +5681,9 @@ function parseDynamicEfi(buf, name) {
   function syncInValues() {
     if (!drawer.classList.contains('open')) return;              // the readings are only visible in the panel
     for (const el of drawer.querySelectorAll('[data-val]')) {
-      const ch = channels[+el.dataset.val], s = fmtCh(ch, ch.v[S.cursor]);
+      const ch = channels[+el.dataset.val];
+      if (!ch) continue;                                         // row from the previous log, replaced right after
+      const s = fmtCh(ch, ch.v[S.cursor]);
       if (el._shown === s) continue;                             // ALL CHANNELS can hold hundreds of rows
       el._shown = s;
       el.innerHTML = `${esc(s)}${ch.unit ? `<small>${esc(ch.unit)}</small>` : ''}`;
