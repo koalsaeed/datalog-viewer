@@ -114,7 +114,7 @@ body {
 .row { -webkit-touch-callout: none; }
 .row.mark { background: var(--accent-soft); }
 .row.mark .nm { color: var(--text); font-weight: 600; }
-.mk { font: 700 9px var(--label); letter-spacing: .1em; color: #fff; background: var(--accent); border-radius: 4px; padding: 2px 5px; flex: none; }
+.mk { font: 700 9px var(--label); letter-spacing: .1em; color: #fff; background: var(--accent); border: 0; border-radius: 4px; padding: 3px 6px; flex: none; cursor: pointer; }
 .legend { position: absolute; top: 6px; left: 14px; right: 14px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; z-index: 2; touch-action: pan-x;
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: 28px; }
 .legend::-webkit-scrollbar { display: none; }
@@ -206,7 +206,7 @@ body {
 </style>
 
 <div class="stage">
-  <div class="caption"><b><i></i>PWP Datalogger</b><span>v12</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
+  <div class="caption"><b><i></i>PWP Datalogger</b><span>v13</span><span id="capText">Interactive prototype · decoding the HP Tuners log in your browser…</span></div>
 
   <div class="fit" id="fit">
     <div class="phone-holder" id="holder">
@@ -249,6 +249,7 @@ body {
           <div class="menu" id="menu" hidden>
             <button id="mOpen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Open log…</button>
             <button id="mTags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>Value tags at cursor<span class="chk" id="tagsChk">ON</span></button>
+            <button id="mUnmark" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Clear marks<span class="chk" id="unmarkN"></span></button>
             <hr>
             <button id="mUnits"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg>Units<span class="chk" id="unitsChk">As logged</span></button>
             <hr>
@@ -2641,7 +2642,11 @@ const HPL_B64 = "";
   $('bLanes').onclick = () => { S.lanes = !S.lanes; $('bLanes').classList.toggle('on', S.lanes); draw(); };
   $('bFit').onclick = fit;
   const menu = $('menu');
-  $('bMore').onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; };
+  $('bMore').onclick = e => {
+    e.stopPropagation(); menu.hidden = !menu.hidden;
+    $('mUnmark').hidden = !(channels && S.marked.size); $('unmarkN').textContent = S.marked.size || '';
+  };
+  $('mUnmark').onclick = () => { menu.hidden = true; S.marked.clear(); legendKey = ''; renderDrawer(); draw(); toast('Marks cleared'); };
   document.addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && e.target.closest('#bMore') == null) menu.hidden = true; });
   $('mTags').onclick = () => { S.tags = !S.tags; $('tagsChk').textContent = S.tags ? 'ON' : 'OFF'; draw(); };
   $('mOpen').onclick = () => {
@@ -5655,11 +5660,11 @@ function parseDynamicEfi(buf, name) {
       let html = `<div class="row sel${hid ? ' hid' : ''}${S.iso === ci ? ' iso' : ''}${S.marked.has(ci) ? ' mark' : ''}" data-k="${k}" data-ci="${ci}" style="color:${col}">
         <button class="dot" data-act="iso" title="Isolate" style="color:${col}"><i style="background:${col}"></i></button>`;
       if (S.renaming === ci) html += `<input class="rename" id="ren" value="${esc(label(ci))}" aria-label="Channel name">`;
-      else html += `<span class="nm" title="${esc(ch.name)}">${esc(label(ci))}</span>${S.marked.has(ci) ? '<span class="mk">MARK</span>' : ''}<span class="val" data-val="${ci}"></span>`;
+      else html += `<span class="nm" title="${esc(ch.name)}">${esc(label(ci))}</span>${S.marked.has(ci) ? '<button class="mk" data-act="mark" title="Unmark">MARK ✕</button>' : ''}<span class="val" data-val="${ci}"></span>`;
       html += `<button class="mini" data-act="hide" title="${hid ? 'Show' : 'Hide'}">${hid ? ICON.eyeOff : ICON.eye}</button>
         <button class="mini" data-act="menu" title="More">${ICON.more}</button>
         <button class="mini handle" data-act="grip" title="Drag to reorder">${ICON.grip}</button></div>`;
-      if (S.openRow === ci) html += `<div class="rowmenu"><button class="chip" data-act="rename" data-ci="${ci}">Rename</button><button class="chip danger" data-act="remove" data-ci="${ci}">Remove from chart</button></div>`;
+      if (S.openRow === ci) html += `<div class="rowmenu"><button class="chip" data-act="mark" data-ci="${ci}">${S.marked.has(ci) ? 'Unmark' : 'Mark'}</button><button class="chip" data-act="rename" data-ci="${ci}">Rename</button><button class="chip danger" data-act="remove" data-ci="${ci}">Remove from chart</button></div>`;
       return html;
     }).join('');
     syncInValues();
@@ -5687,7 +5692,7 @@ function parseDynamicEfi(buf, name) {
   function toggleMark(ci) {
     if (S.marked.has(ci)) S.marked.delete(ci); else S.marked.add(ci);
     try { navigator.vibrate && navigator.vibrate(12); } catch (e) { /* not allowed */ }
-    toast(S.marked.has(ci) ? `Marked: ${label(ci)}` : `Unmarked: ${label(ci)}`);
+    toast(S.marked.has(ci) ? `Marked: ${label(ci)} · long-press again to unmark` : `Unmarked: ${label(ci)}`);
     legendKey = ''; renderDrawer(); draw();
   }
   function longPress(el, getCi) {
@@ -5717,11 +5722,12 @@ function parseDynamicEfi(buf, name) {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const row = b.closest('.row'), ci = +(b.dataset.ci ?? row?.dataset.ci);
     const act = b.dataset.act;
+    if (act === 'mark') { S.openRow = null; toggleMark(ci); return; }
     if (act === 'iso') S.iso = S.iso === ci ? null : ci;
     else if (act === 'hide') { if (S.hidden.has(ci)) S.hidden.delete(ci); else { S.hidden.add(ci); if (S.iso === ci) S.iso = null; } }
     else if (act === 'menu') S.openRow = S.openRow === ci ? null : ci;
     else if (act === 'rename') { S.openRow = null; S.renaming = ci; }
-    else if (act === 'remove') { S.sel = S.sel.filter(x => x !== ci); S.hidden.delete(ci); if (S.iso === ci) S.iso = null; S.openRow = null; }
+    else if (act === 'remove') { S.sel = S.sel.filter(x => x !== ci); S.hidden.delete(ci); S.marked.delete(ci); if (S.iso === ci) S.iso = null; S.openRow = null; }
     else return;
     renderDrawer(); draw();
   });
@@ -5763,7 +5769,7 @@ function parseDynamicEfi(buf, name) {
   $('allList').addEventListener('click', e => {
     const r = e.target.closest('[data-add]'); if (!r) return;
     const i = +r.dataset.add;
-    if (S.sel.length >= 8) { const d = S.sel.shift(); S.hidden.delete(d); if (S.iso === d) S.iso = null; }
+    if (S.sel.length >= 8) { const d = S.sel.shift(); S.hidden.delete(d); S.marked.delete(d); if (S.iso === d) S.iso = null; }
     S.sel.push(i);
     renderDrawer(); draw();
   });
