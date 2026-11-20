@@ -31,6 +31,10 @@ jobs:
           path: tests/.cache/fixtures
           key: fixtures-${{ hashFiles('tests/fixtures/manifest.json') }}
 
+      - name: App page matches its source
+        working-directory: .
+        run: viewer/build.sh --check
+
       - name: Install test dependencies
         run: |
           npm ci
