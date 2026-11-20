@@ -1,7 +1,8 @@
 # Viewer tests
 
-Browser tests for `assets/viewer/index.html`, the page the Android app loads. They run in
-CI on every push, and the APK is only built when they pass.
+Browser tests for `assets/viewer/index.html`, the page the Android app loads. They run on
+every push (`.github/workflows/tests.yml`) and before every APK build, which is manual
+(`build-apk.yml`) and stops if they fail.
 
 ```
 cd tests

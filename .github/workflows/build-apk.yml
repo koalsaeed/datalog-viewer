@@ -1,8 +1,8 @@
 name: Build Android APK
 
-# Runs on every push, or manually from the Actions tab.
+# Manual only: Actions tab → Build Android APK → Run workflow (or on request). It runs the
+# tests first and builds the APK only when they pass.
 on:
-  push:
   workflow_dispatch:
 
 jobs:

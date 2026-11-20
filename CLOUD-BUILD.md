@@ -98,12 +98,13 @@ me — we switch to a browser preview instead.
 
 ## Changing the app later
 
-Every push triggers a new build. Two ways to change code:
+Pushes run the tests only; the APK is built on request. Two ways to change code:
 
 - **I give you a file** → open it on GitHub, click the pencil, paste, commit.
 - **I give you a patch** → you edit the one file I name.
 
-The build starts automatically and a new APK appears in ~7 minutes.
+To build: **Actions → Build Android APK → Run workflow**. It runs the tests, then a new
+APK appears in ~7 minutes.
 
 ---
 

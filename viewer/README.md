@@ -8,8 +8,8 @@ viewer/build.sh            # writes assets/viewer/index.html, the page the Andro
 viewer/build.sh --check    # CI: fails if that page is not what the source builds
 ```
 
-`viewer/build.sh --prototype OUT F150.hpl MUSTANG.hpl` also writes the phone-frame
-prototype page with two HP Tuners logs embedded as samples. Those are customer logs:
-keep OUT outside the repository.
+`viewer/build.sh --prototype OUT` also writes the phone-frame prototype page (the
+shareable demo with notes). Both open `sample_cruise.emublog` on start; customer logs are
+never embedded.
 
 Edit `viewer.html` or a reader, run `viewer/build.sh`, then the tests in `tests/`.

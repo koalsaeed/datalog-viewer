@@ -1,14 +1,6 @@
 import sys, os, re
 base, out, rd = sys.argv[1], sys.argv[2], sys.argv[3]
-samples = sys.argv[4:6]   # optional: the two HP Tuners logs the prototype page embeds (private, never committed)
 s = open(base).read()
-if samples:
-    import base64
-    for var, path in zip(['HPL_B64', 'HPL2_B64'], samples):
-        b = base64.b64encode(open(path, 'rb').read()).decode()
-        lines = ',\n'.join('"' + b[i:i + 2000] + '"' for i in range(0, len(b), 2000))
-        s, n = re.subn(r'const %s = "";' % var, lambda m: 'const %s = [\n%s\n].join("");' % (var, lines), s)
-        assert n == 1, var
 def rep(a, b):
     global s
     assert s.count(a) == 1, (a[:90], s.count(a)); s = s.replace(a, b)

@@ -4,13 +4,6 @@ s = open(src).read()
 def rep(a, b):
     global s
     assert s.count(a) == 1, (a[:80], s.count(a)); s = s.replace(a, b)
-# no personal logs in the app build (the repo is public): drop the embedded HP Tuners samples
-s, n = re.subn(r'const (HPL2?_B64) = (\[\n[\s\S]*?\n\]\.join\(""\)|""[^\n]*);', r'const \1 = "";', s); assert n == 2, n
-s = re.sub(r'\s*<button id="mSampleHpl2?">[\s\S]*?</button>', '', s)
-rep("  $('mSampleHpl').onclick = () => { menu.hidden = true; openLog(async () => b64(HPL_B64), HPL_NAME); };\n", "")
-rep("  $('mSampleHpl2').onclick = () => { menu.hidden = true; openLog(async () => b64(HPL2_B64), HPL2_NAME); };\n", "")
-rep("  openLog(async () => b64(HPL_B64), HPL_NAME);\n",
-    "  openLog(async () => new TextEncoder().encode(document.getElementById('sampleCsv').textContent).buffer, 'sample: datalog3.csv');\n")
 # full-screen app mode: no phone frame, no notes
 rep("<style>\n", """<style>
 html.app, html.app body { padding: 0 !important; margin: 0; height: 100%; overflow: hidden; }

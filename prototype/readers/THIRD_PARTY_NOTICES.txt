@@ -30,7 +30,8 @@ SOFTWARE.
 
 -----
 
-ecumaster.js ports the EMU Black channel map of zazzn/emublog2mlv:
+ecumaster.js ports the EMU Black channel map of zazzn/emublog2mlv, and the viewer
+opens that project's examples/sample_cruise.emublog as its start-up sample:
 
 MIT License
 
