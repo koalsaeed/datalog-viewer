@@ -1,0 +1,188 @@
+[
+ {
+  "file": "mhd-n55-pull.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/mhd/mhd-n55-pull.csv",
+  "sha256": "860feb69bdc779d4d9511d07bcba83be5b32d826e8aff0c9973540b1d8c6e7f6",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "SBM22GCA4MW001405_Nov_09__2025_04_20_PM_LiveData.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/bluedriver/SBM22GCA4MW001405_Nov_09__2025_04_20_PM_LiveData.csv",
+  "sha256": "e02e56f6a694b280af610317c940983442ff0c38e1ab864c545bb9a35389feda",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "ME221_2025_12_22_13_13_40.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/motorsportElectronics/ME221_2025_12_22_13_13_40.csv",
+  "sha256": "af636f48b4cc0aeb932d2f65f80fbcee98a4d3889a2f4ffd720c6427627a3360",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "220kpa.emublog",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/ecumaster/220kpa.emublog",
+  "sha256": "b20b99cbc41e040eb417060ac2a88d9edca36098964b491db3d72462b949aa70",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "20251006_0834_toWorkNewCap.dat",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/dynamicEFI/20251006_0834_toWorkNewCap.dat",
+  "sha256": "b496813c252b4ed86fffd1b3bb65901ad66525884495dfded14fb6f8f18152b7",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "20251006_0834_toWorkNewCap.dat.zip",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/dynamicEFI/20251006_0834_toWorkNewCap.dat.zip",
+  "sha256": "70862f75f2bddb5b15c7c4ef73928a33cb01690619b7b3b72fcc0d0a5aa194a3",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "session_massa_finalese_v3_excerpt.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/racechrono/session_massa_finalese_v3_excerpt.csv",
+  "sha256": "63acea8298e71944f5b1737a33a90739ed6d9aa31e0d6a7684dcfe9020ea7099",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "romraiderlog_20251031_170713.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/RomRaider/romraiderlog_20251031_170713.csv",
+  "sha256": "19160f347b2e07414a19f296e81e93f6d107ecc8691287d498b8df9dd147b74b",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "trackLog_synthetic_two_sessions.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/torque/trackLog_synthetic_two_sessions.csv",
+  "sha256": "83ce99af1efb4aaa316be87c0f50064accd395025d52272e9076319d2fbdc317",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "ECU Log 2024-02-8 3;56;20 pm.llg5",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/link/ECU%20Log%202024-02-8%203%3B56%3B20%20pm.llg5",
+  "sha256": "b37de7b29baa0bd56a7479f25db87691ce397b18c0f82964ead2ac4654c77faa",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "linklog.llg",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/link/linklog.llg",
+  "sha256": "0fb75f660334eb2b4bc11c2b331e5cd2a18ffbf35e806a8b04a918be2b44ae96",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "realdash_speeduino_excerpt.msl",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/msl/realdash_speeduino_excerpt.msl",
+  "sha256": "75682b7d796b78518cb59f76ad3bbde97754bc4ab15b00306c946595619a3eff",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "CSVLog_20260811_131143.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/obdlink/CSVLog_20260811_131143.csv",
+  "sha256": "944002d9ee28d32a7eda94cd7f904df82374f39f961c747276ecf56a710f5b1e",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "10.9 (1).csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/HondaTuningStudio/10.9%20%281%29.csv",
+  "sha256": "9e1e44f423761e26252efef8b0825d0abe1aa8e6910ba20428cff8f458847960",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "10.92.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/megasquirt/10.92.csv",
+  "sha256": "9e1e44f423761e26252efef8b0825d0abe1aa8e6910ba20428cff8f458847960",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "2025_1218_1904.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/ecumaster/2025_1218_1904.csv",
+  "sha256": "351cd0cd07099a5882706b905e3a283f0ebabbc8576ae39507a3173aa76243ff",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "2025-07-18_0215pm_Log1118.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/haltech/2025-07-18_0215pm_Log1118.csv",
+  "sha256": "b10d648b18b64013bdefe03e8c8ef7a29359c55e83241b06bbaf4a07da888e1f",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "20250529_1248_31.emuprolog.gz",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/ecumaster/20250529_1248_31.emuprolog.gz",
+  "sha256": "025706e5763acc9052430fc2d3c0fd1ee0ecc5034a7c3d3b87eb233f894e998f",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "Log1.mlg",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/rusefi/Log1.mlg",
+  "sha256": "c69a5654ab5e699bef28fb9c07f06185726dcd10399b3e722b6053ef30f1369e",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "speeduino.mlg",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/speeduino/speeduino.mlg",
+  "sha256": "353506c01c0f7163d3c530435de46b69b3fbdcd0a86f9cce147bec62c379c999",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "Woolich.csv",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/woolich/Woolich.csv",
+  "sha256": "f4d117b2a1b0b7bd429268060621a49ead06f9818aa59f90b4c77ddd5c2c6125",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "EM Log MG ZS Turbo boost run.lg1",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/emerald/EM%20Log%20MG%20ZS%20Turbo%20boost%20run.lg1",
+  "sha256": "5820f4bff4a8a6b3066fa1e44abf5fc9721b3ad37359fcb6c55c671767c9b24a",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "EM Log MG ZS Turbo boost run.lg2",
+  "url": "https://raw.githubusercontent.com/ClassicMiniDIY/UltraLog/ecb4f8ef8f7dc7a141de2fd23dd65013e1667537/exampleLogs/emerald/EM%20Log%20MG%20ZS%20Turbo%20boost%20run.lg2",
+  "sha256": "1eb5ad2e1d8b4bca23d93b7ff4aae6d642af5d1791e13a2653a1ed3fc821d882",
+  "source": "ClassicMiniDIY/UltraLog"
+ },
+ {
+  "file": "sample_cruise.emublog",
+  "url": "https://raw.githubusercontent.com/zazzn/emublog2mlv/728fcf1db02798fbed02ca4c4ea0ed225b060702/examples/sample_cruise.emublog",
+  "sha256": "73bd4ec9359cb30f977389dde910f6393c2fe4e32fef0abd4f8b19f3184f8c66",
+  "source": "zazzn/emublog2mlv"
+ },
+ {
+  "file": "puxada wot.ftml",
+  "url": "https://raw.githubusercontent.com/Luwob/powerft-datalog-decoder-csv/0fa5e03d3656b00cac1b1d050c59d76b8b85c019/resources/puxada%20wot.ftml",
+  "sha256": "9e3c08b7320f2faab36c10bf3a9571a931f69e9484e7aa8bf4594c936b658108",
+  "source": "Luwob/powerft-datalog-decoder-csv"
+ },
+ {
+  "file": "puxada wot_20260501-1148.csv",
+  "url": "https://raw.githubusercontent.com/Luwob/powerft-datalog-decoder-csv/0fa5e03d3656b00cac1b1d050c59d76b8b85c019/resources/puxada%20wot_20260501-1148.csv",
+  "sha256": "d20320308e03e613e8971ab6137ca5abf031cffaecb57787de8eaa13d3a80945",
+  "source": "Luwob/powerft-datalog-decoder-csv"
+ },
+ {
+  "file": "test.xrk",
+  "url": "https://raw.githubusercontent.com/m3rlin45/libxrk/4e44d38debc9445b8e5446c9b7a241f5730ac920/tests/test_data/aim_official/test.xrk",
+  "sha256": "39b3598b9d4cf6cb3815450aec95d5272f453ad9ac16ac789aea7d7ad22f2f50",
+  "source": "m3rlin45/libxrk"
+ },
+ {
+  "file": "badGPSdata.zip",
+  "url": "https://raw.githubusercontent.com/m3rlin45/libxrk/4e44d38debc9445b8e5446c9b7a241f5730ac920/tests/test_data/issue49/badGPSdata.zip",
+  "sha256": "2a63c4074b723693663cf011d0596058f02a078614815bb6f28660d6757c862c",
+  "source": "m3rlin45/libxrk"
+ },
+ {
+  "file": "ms3_sd.msl",
+  "url": "https://raw.githubusercontent.com/nshobe/Log2Dyno/280dd5ea5ff39db4984b0cc5b5f608cf86c22bdf/tests/fixtures/ms3_sd.msl",
+  "sha256": "139175371a0abc9892c7e2d2a1fb79247bfdc2e1f23a6af39e16b2bfa01515ff",
+  "source": "nshobe/Log2Dyno"
+ },
+ {
+  "file": "haltech_wide.csv",
+  "url": "https://raw.githubusercontent.com/nshobe/Log2Dyno/280dd5ea5ff39db4984b0cc5b5f608cf86c22bdf/tests/fixtures/haltech_wide.csv",
+  "sha256": "794cc1249060bb8bc861a0f8e29a73106f52b920073dc8eecb449a17a192382d",
+  "source": "nshobe/Log2Dyno"
+ },
+ {
+  "file": "Sample1.ld",
+  "url": "https://raw.githubusercontent.com/afonso360/motec-i2/master/samples/Sample1.ld",
+  "sha256": "cc794689b8937d9b4eff18fa5926674b7334c9bf2fc51be06dfd1b0ce8afdeb1",
+  "source": "afonso360/motec-i2"
+ }
+]

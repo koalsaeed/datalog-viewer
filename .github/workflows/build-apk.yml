@@ -6,7 +6,41 @@ on:
   workflow_dispatch:
 
 jobs:
+  # The viewer page the app loads, tested in Chromium on real sample logs. No APK is
+  # built unless these pass.
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Cache sample logs
+        uses: actions/cache@v4
+        with:
+          path: tests/.cache/fixtures
+          key: fixtures-${{ hashFiles('tests/fixtures/manifest.json') }}
+
+      - name: Install test dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run tests
+        run: npm test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 25
 

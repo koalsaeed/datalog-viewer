@@ -4,3 +4,6 @@ android/
 ios/
 .flutter-plugins
 .flutter-plugins-dependencies
+tests/node_modules/
+tests/.cache/
+tests/.private/

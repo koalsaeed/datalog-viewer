@@ -1,0 +1,1176 @@
+{
+ "10.9 (1).csv": {
+  "meta": "22 ch · 4:59.5 · CSV",
+  "channels": 22,
+  "standard": [
+   "RPM",
+   "TPS",
+   "IGN Final",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    876,
+    9920
+   ],
+   "TPS": [
+    0,
+    101
+   ],
+   "IGN Final": [
+    -1.5,
+    45.5
+   ],
+   "MAP": [
+    165,
+    2993
+   ]
+  }
+ },
+ "10.92.csv": {
+  "meta": "22 ch · 4:59.5 · CSV",
+  "channels": 22,
+  "standard": [
+   "RPM",
+   "TPS",
+   "IGN Final",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    876,
+    9920
+   ],
+   "TPS": [
+    0,
+    101
+   ],
+   "IGN Final": [
+    -1.5,
+    45.5
+   ],
+   "MAP": [
+    165,
+    2993
+   ]
+  }
+ },
+ "2025-07-18_0215pm_Log1118.csv": {
+  "meta": "114 ch · 0:17.6 · Haltech NSP",
+  "channels": 114,
+  "standard": [
+   "RPM",
+   "Throttle Position",
+   "O2 Control Bank 1 Short Term Fuel Trim",
+   "Ignition Angle",
+   "Knock Sensor 1 Knock Signal",
+   "Wideband O2 Overall",
+   "Fuel - Load (MAP)"
+  ],
+  "ranges": {
+   "RPM": [
+    633,
+    3516
+   ],
+   "Throttle Position": [
+    4.2,
+    54
+   ],
+   "O2 Control Bank 1 Short Term Fuel Trim": [
+    -10,
+    8.3
+   ],
+   "Ignition Angle": [
+    8.5,
+    45.6
+   ],
+   "Knock Sensor 1 Knock Signal": [
+    15.82,
+    39.15
+   ],
+   "Wideband O2 Overall": [
+    0.42,
+    4.43
+   ],
+   "Fuel - Load (MAP)": [
+    26.4,
+    98
+   ]
+  }
+ },
+ "20250529_1248_31.emuprolog.gz": {
+  "meta": "382 ch · 6:43.2 · ECUMaster EMU PRO (.emuprolog) · 995 unchanging channels hidden",
+  "channels": 382,
+  "standard": [
+   "engine/rpm",
+   "sensors/tps1",
+   "fuel/shortTermTrim/correctionAverage",
+   "ignition/angle",
+   "knock/detection/signalMax",
+   "sensors/lambda1",
+   "engine/efficiencyLoad"
+  ],
+  "ranges": {
+   "engine/rpm": [
+    0,
+    2581
+   ],
+   "sensors/tps1": [
+    0.4,
+    9.6
+   ],
+   "fuel/shortTermTrim/correctionAverage": [
+    -6.1,
+    1.6
+   ],
+   "ignition/angle": [
+    -7,
+    28.1
+   ],
+   "knock/detection/signalMax": [
+    0,
+    8.594
+   ],
+   "sensors/lambda1": [
+    0.747,
+    2.858
+   ],
+   "engine/efficiencyLoad": [
+    22.8,
+    100.7
+   ]
+  }
+ },
+ "20251006_0834_toWorkNewCap.dat": {
+  "meta": "32 ch · 1:00.2 · DynamicEFI / EBL Flash .dat (EBL Flash What's Up Display)",
+  "channels": 32,
+  "standard": [
+   "RPM",
+   "TPS",
+   "O2",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    0,
+    2421
+   ],
+   "TPS": [
+    0,
+    53.91
+   ],
+   "O2": [
+    0,
+    795.6
+   ],
+   "MAP": [
+    25.91,
+    98.23
+   ]
+  }
+ },
+ "20251006_0834_toWorkNewCap.dat.zip": {
+  "meta": "32 ch · 1:00.2 · DynamicEFI / EBL Flash .dat (EBL Flash What's Up Display)",
+  "channels": 32,
+  "standard": [
+   "RPM",
+   "TPS",
+   "O2",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    0,
+    2421
+   ],
+   "TPS": [
+    0,
+    53.91
+   ],
+   "O2": [
+    0,
+    795.6
+   ],
+   "MAP": [
+    25.91,
+    98.23
+   ]
+  }
+ },
+ "2025_1218_1904.csv": {
+  "meta": "19 ch · 6:43.2 · CSV",
+  "channels": 19,
+  "standard": [
+   "engine/rpm",
+   "sensors/tps1",
+   "ignition/angle"
+  ],
+  "ranges": {
+   "engine/rpm": [
+    0,
+    2581
+   ],
+   "sensors/tps1": [
+    0.4,
+    9.6
+   ],
+   "ignition/angle": [
+    -7,
+    28.1
+   ]
+  }
+ },
+ "220kpa.emublog": {
+  "meta": "32 ch · 11:51.0 · ECUMaster EMU Black (.emublog)",
+  "channels": 32,
+  "standard": [
+   "RPM",
+   "TPS",
+   "ShortTermTrim",
+   "IgnitionAngle",
+   "KnockSensor",
+   "Lambda",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    815,
+    7293
+   ],
+   "TPS": [
+    0,
+    100
+   ],
+   "ShortTermTrim": [
+    100,
+    106
+   ],
+   "IgnitionAngle": [
+    15,
+    44
+   ],
+   "KnockSensor": [
+    0,
+    0
+   ],
+   "Lambda": [
+    0.7109,
+    1.07
+   ],
+   "MAP": [
+    13,
+    226
+   ]
+  }
+ },
+ "CSVLog_20260811_131143.csv": {
+  "meta": "7 ch · 34:09.6 · CSV",
+  "channels": 7,
+  "standard": [
+   "Engine RPM",
+   "Ignition timing advance for #1 cylinder",
+   "Knocking Retard",
+   "O2 sensor lambda wide range (current probe)  (Bank 1  Sensor 1)",
+   "Absolute load value"
+  ],
+  "ranges": {
+   "Engine RPM": [
+    0,
+    7537
+   ],
+   "Ignition timing advance for #1 cylinder": [
+    -18.5,
+    48.5
+   ],
+   "Knocking Retard": [
+    -1.836,
+    0.25
+   ],
+   "O2 sensor lambda wide range (current probe)  (Bank 1  Sensor 1)": [
+    0,
+    1.999
+   ],
+   "Absolute load value": [
+    0,
+    98.43
+   ]
+  }
+ },
+ "ECU Log 2024-02-8 3;56;20 pm.llg5": {
+  "meta": "30 ch · 0:52.8 · Link ECU llg5 (G5 Voodoo Pro)",
+  "channels": 30,
+  "standard": [
+   "Engine Speed",
+   "TPS (Main)",
+   "Ignition Angle",
+   "Lambda Avg",
+   "MAP"
+  ],
+  "ranges": {
+   "Engine Speed": [
+    0,
+    4019
+   ],
+   "TPS (Main)": [
+    16.6,
+    56.8
+   ],
+   "Ignition Angle": [
+    0,
+    34.2
+   ],
+   "Lambda Avg": [
+    0,
+    0
+   ],
+   "MAP": [
+    34,
+    100.1
+   ]
+  }
+ },
+ "EM Log MG ZS Turbo boost run.lg1": {
+  "meta": "8 ch · 11:06.2 · Emerald ECU .lg1 + .lg2",
+  "channels": 8,
+  "standard": [
+   "RPM",
+   "Throttle",
+   "Ignition Advance? (raw)",
+   "Load Site"
+  ],
+  "ranges": {
+   "RPM": [
+    1602,
+    6252
+   ],
+   "Throttle": [
+    0,
+    100
+   ],
+   "Ignition Advance? (raw)": [
+    630,
+    950
+   ],
+   "Load Site": [
+    0,
+    15
+   ]
+  }
+ },
+ "Log1.mlg": {
+  "meta": "781 ch · 0:07.3 · MegaLogViewer .mlg",
+  "channels": 781,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Fuel: Trim bank 1",
+   "Ignition: Timing",
+   "Knock: Retard",
+   "Lambda",
+   "Fuel: Load"
+  ],
+  "ranges": {
+   "RPM": [
+    66,
+    66
+   ],
+   "TPS": [
+    1,
+    2.97
+   ],
+   "Fuel: Trim bank 1": [
+    0,
+    0
+   ],
+   "Ignition: Timing": [
+    2,
+    2
+   ],
+   "Knock: Retard": [
+    0,
+    0
+   ],
+   "Lambda": [
+    0,
+    0
+   ],
+   "Fuel: Load": [
+    42.59,
+    47.26
+   ]
+  }
+ },
+ "ME221_2025_12_22_13_13_40.csv": {
+  "meta": "201 ch · 0:04.9 · CSV",
+  "channels": 201,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Ignition Adv. Angle",
+   "Knock Acc. Lvl.",
+   "O2 Val",
+   "Primary Load"
+  ],
+  "ranges": {
+   "RPM": [
+    1101,
+    1132
+   ],
+   "TPS": [
+    0,
+    0
+   ],
+   "Ignition Adv. Angle": [
+    16.03,
+    16.43
+   ],
+   "Knock Acc. Lvl.": [
+    6408,
+    6436
+   ],
+   "O2 Val": [
+    2.3,
+    2.42
+   ],
+   "Primary Load": [
+    26.73,
+    27.19
+   ]
+  }
+ },
+ "SBM22GCA4MW001405_Nov_09__2025_04_20_PM_LiveData.csv": {
+  "meta": "4 ch · 0:57.6 · CSV",
+  "channels": 4,
+  "standard": [
+   "O2 Bank 1 - Sensor 2 - Oxygen Sensor Voltage",
+   "O2 Bank 2 - Sensor 2 Oxygen Sensor Voltage"
+  ],
+  "ranges": {
+   "O2 Bank 1 - Sensor 2 - Oxygen Sensor Voltage": [
+    0.168,
+    0.26
+   ],
+   "O2 Bank 2 - Sensor 2 Oxygen Sensor Voltage": [
+    0.142,
+    0.667
+   ]
+  }
+ },
+ "Sample1.ld": {
+  "meta": "78 ch · 7:34.0 · MoTeC .ld · 11A · Calder",
+  "channels": 78,
+  "standard": [
+   "Engine RPM",
+   "Throttle Pos",
+   "Ign Advance",
+   "Lambda 1",
+   "Manifold Pres"
+  ],
+  "ranges": {
+   "Engine RPM": [
+    0,
+    6846
+   ],
+   "Throttle Pos": [
+    0,
+    99.9
+   ],
+   "Ign Advance": [
+    0,
+    31.3
+   ],
+   "Lambda 1": [
+    0,
+    1.485
+   ],
+   "Manifold Pres": [
+    0,
+    102.9
+   ]
+  }
+ },
+ "Woolich.csv": {
+  "meta": "9 ch · 7:43.2 · CSV",
+  "channels": 9,
+  "standard": [
+   "RPM",
+   "TPS",
+   "AFR"
+  ],
+  "ranges": {
+   "RPM": [
+    0,
+    8310
+   ],
+   "TPS": [
+    0,
+    100
+   ],
+   "AFR": [
+    0,
+    21
+   ]
+  }
+ },
+ "badGPSdata.zip": {
+  "meta": "86 ch · 25:01.5 · AiM XRK",
+  "channels": 86,
+  "standard": [
+   "ECU_RPM",
+   "ECU_THROTTLE",
+   "ECU_INJ_COR_LAM",
+   "ECU_LAMBDA",
+   "ECU_LOAD_CELL"
+  ],
+  "ranges": {
+   "ECU_RPM": [
+    -12290,
+    15820
+   ],
+   "ECU_THROTTLE": [
+    null,
+    51.38
+   ],
+   "ECU_INJ_COR_LAM": [
+    null,
+    1.149
+   ],
+   "ECU_LAMBDA": [
+    null,
+    5.98
+   ],
+   "ECU_LOAD_CELL": [
+    null,
+    940
+   ]
+  }
+ },
+ "haltech_wide.csv": {
+  "meta": "21 ch · 0:02.0 · CSV",
+  "channels": 21,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Knock: Current level",
+   "Lambda",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    1000,
+    6500
+   ],
+   "TPS": [
+    0,
+    100
+   ],
+   "Knock: Current level": [
+    -40,
+    -40
+   ],
+   "Lambda": [
+    0.82,
+    0.95
+   ],
+   "MAP": [
+    30,
+    157
+   ]
+  }
+ },
+ "linklog.llg": {
+  "meta": "485 ch · 0:22.9 · Link ECU llg (G4+ Xtreme Black)",
+  "channels": 485,
+  "standard": [
+   "Engine Speed",
+   "TP (Main)",
+   "CL Lambda  Fuel  Corr.",
+   "Ign Angle",
+   "Knock Level  Global",
+   "Lambda 1",
+   "Load (Abs)"
+  ],
+  "ranges": {
+   "Engine Speed": [
+    0,
+    11450
+   ],
+   "TP (Main)": [
+    0,
+    38.5
+   ],
+   "CL Lambda  Fuel  Corr.": [
+    5.551e-15,
+    5.551e-15
+   ],
+   "Ign Angle": [
+    5.551e-15,
+    40
+   ],
+   "Knock Level  Global": [
+    0,
+    0
+   ],
+   "Lambda 1": [
+    0,
+    0
+   ],
+   "Load (Abs)": [
+    0,
+    86.7
+   ]
+  }
+ },
+ "mhd-n55-pull.csv": {
+  "meta": "31 ch · 0:29.4 · CSV",
+  "channels": 31,
+  "standard": [
+   "RPM",
+   "Throttle Position",
+   "STFT 2",
+   "Lambda bank 1",
+   "Load actual"
+  ],
+  "ranges": {
+   "RPM": [
+    1346,
+    6536
+   ],
+   "Throttle Position": [
+    4.1,
+    81.2
+   ],
+   "STFT 2": [
+    -34,
+    34
+   ],
+   "Lambda bank 1": [
+    15.1,
+    15.16
+   ],
+   "Load actual": [
+    11.8,
+    198.1
+   ]
+  }
+ },
+ "ms3_sd.msl": {
+  "meta": "11 ch · 0:02.0 · CSV",
+  "channels": 11,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Spark Advance",
+   "Knock Retard",
+   "Lambda 1",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    1000,
+    6500
+   ],
+   "TPS": [
+    0,
+    100
+   ],
+   "Spark Advance": [
+    10,
+    21.6
+   ],
+   "Knock Retard": [
+    0,
+    0.5
+   ],
+   "Lambda 1": [
+    0.82,
+    0.95
+   ],
+   "MAP": [
+    30,
+    180
+   ]
+  }
+ },
+ "puxada wot.ftml": {
+  "meta": "33 ch · 4:08.4 · FuelTech FTManager .ftml (FT450 SFI (5.56.00))",
+  "channels": 33,
+  "standard": [
+   "RPM",
+   "TPS",
+   "O2 correction",
+   "Ignition timing",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    957,
+    5578
+   ],
+   "TPS": [
+    0,
+    100
+   ],
+   "O2 correction": [
+    -5,
+    10
+   ],
+   "Ignition timing": [
+    0,
+    33.4
+   ],
+   "MAP": [
+    -1,
+    -0.12
+   ]
+  }
+ },
+ "puxada wot_20260501-1148.csv": {
+  "meta": "9 ch · 0:10.1 · CSV",
+  "channels": 9,
+  "standard": [
+   "RPM",
+   "TPS",
+   "O2_Correction",
+   "Ignition_timing",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    1977,
+    5528
+   ],
+   "TPS": [
+    0,
+    100
+   ],
+   "O2_Correction": [
+    -4.48,
+    10
+   ],
+   "Ignition_timing": [
+    8.59,
+    31.13
+   ],
+   "MAP": [
+    -0.98,
+    -0.14
+   ]
+  }
+ },
+ "realdash_speeduino_excerpt.msl": {
+  "meta": "28 ch · 1:48.1 · CSV",
+  "channels": 28,
+  "standard": [
+   "RPM",
+   "TPS",
+   "EGO cor1",
+   "SPK: Spark Advance",
+   "AFR",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    0,
+    2286
+   ],
+   "TPS": [
+    7,
+    40
+   ],
+   "EGO cor1": [
+    100,
+    100
+   ],
+   "SPK: Spark Advance": [
+    -1,
+    0
+   ],
+   "AFR": [
+    10.5,
+    18.6
+   ],
+   "MAP": [
+    24,
+    91
+   ]
+  }
+ },
+ "romraiderlog_20251031_170713.csv": {
+  "meta": "4 ch · 13:47.2 · CSV",
+  "channels": 4,
+  "standard": [
+   "PLX Engine Speed",
+   "Timing Advance",
+   "PLX O2 - Wideband",
+   "PLX Manifold Absolute Pressure"
+  ],
+  "ranges": {
+   "PLX Engine Speed": [
+    684,
+    6686
+   ],
+   "Timing Advance": [
+    9,
+    44
+   ],
+   "PLX O2 - Wideband": [
+    0.68,
+    1.36
+   ],
+   "PLX Manifold Absolute Pressure": [
+    0.07,
+    2.01
+   ]
+  }
+ },
+ "sample_cruise.emublog": {
+  "meta": "32 ch · 0:30.9 · ECUMaster EMU Black (.emublog)",
+  "channels": 32,
+  "standard": [
+   "RPM",
+   "TPS",
+   "ShortTermTrim",
+   "IgnitionAngle",
+   "KnockSensor",
+   "Lambda",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    797,
+    2129
+   ],
+   "TPS": [
+    0,
+    13
+   ],
+   "ShortTermTrim": [
+    93,
+    105
+   ],
+   "IgnitionAngle": [
+    12.5,
+    31.5
+   ],
+   "KnockSensor": [
+    0.2158,
+    0.4708
+   ],
+   "Lambda": [
+    0.8047,
+    1.195
+   ],
+   "MAP": [
+    35,
+    73
+   ]
+  }
+ },
+ "session_massa_finalese_v3_excerpt.csv": {
+  "meta": "34 ch · 68:15.3 · CSV",
+  "channels": 34,
+  "standard": [
+   "rpm",
+   "fragment_id",
+   "lap_number"
+  ],
+  "ranges": {
+   "rpm": [
+    0,
+    6420
+   ],
+   "fragment_id": [
+    0,
+    2
+   ],
+   "lap_number": [
+    12,
+    29
+   ]
+  }
+ },
+ "speeduino.mlg": {
+  "meta": "58 ch · 0:09.2 · MegaLogViewer .mlg",
+  "channels": 58,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Gego",
+   "Advance",
+   "AFR",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    0,
+    4816
+   ],
+   "TPS": [
+    0,
+    4
+   ],
+   "Gego": [
+    100,
+    100
+   ],
+   "Advance": [
+    5,
+    29
+   ],
+   "AFR": [
+    25.5,
+    25.5
+   ],
+   "MAP": [
+    312,
+    313
+   ]
+  }
+ },
+ "test.xrk": {
+  "meta": "33 ch · 9:58.4 · AiM XRK",
+  "channels": 33,
+  "standard": [
+   "RPM",
+   "Logger Temperature",
+   "Exhaust Temp"
+  ],
+  "ranges": {
+   "RPM": [
+    0,
+    14130
+   ],
+   "Logger Temperature": [
+    8.5,
+    13.2
+   ],
+   "Exhaust Temp": [
+    6.801,
+    599.5
+   ]
+  }
+ },
+ "trackLog_synthetic_two_sessions.csv": {
+  "meta": "202 ch · 4:29.1 · CSV",
+  "channels": 202,
+  "standard": [
+   "Engine RPM",
+   "Absolute Throttle Position B",
+   "Fuel Trim Bank 1 Short Term",
+   "Timing Advance",
+   "Engine Load"
+  ],
+  "ranges": {
+   "Engine RPM": [
+    0,
+    231
+   ],
+   "Absolute Throttle Position B": [
+    0,
+    1
+   ],
+   "Fuel Trim Bank 1 Short Term": [
+    0,
+    201
+   ],
+   "Timing Advance": [
+    0,
+    123
+   ],
+   "Engine Load": [
+    0,
+    219
+   ]
+  }
+ },
+ "car.MaxxECU-Zip-log": {
+  "meta": "7 ch · 1:00.0 · MaxxECU log",
+  "channels": 7,
+  "standard": [
+   "RPM",
+   "Throttle position",
+   "Lambda"
+  ],
+  "ranges": {
+   "RPM": [
+    1500,
+    5000
+   ],
+   "Throttle position": [
+    0,
+    80
+   ],
+   "Lambda": [
+    0.75,
+    0.95
+   ]
+  }
+ },
+ "haltech.csv": {
+  "meta": "5 ch · 0:10.0 · CSV",
+  "channels": 5,
+  "standard": [
+   "Engine Speed",
+   "Ignition Angle",
+   "Manifold Pressure"
+  ],
+  "ranges": {
+   "Engine Speed": [
+    2000,
+    3996
+   ],
+   "Ignition Angle": [
+    15.01,
+    20
+   ],
+   "Manifold Pressure": [
+    100,
+    149.9
+   ]
+  }
+ },
+ "maxx.csv": {
+  "meta": "4 ch · 0:10.0 · CSV",
+  "channels": 4,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Lambda A",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    1500,
+    3995
+   ],
+   "TPS": [
+    0,
+    99
+   ],
+   "Lambda A": [
+    0.9,
+    1.399
+   ],
+   "MAP": [
+    90,
+    189.8
+   ]
+  }
+ },
+ "maxxecu.MaxxECU-log": {
+  "meta": "7 ch · 1:00.0 · MaxxECU log",
+  "channels": 7,
+  "standard": [
+   "RPM",
+   "Throttle position",
+   "Lambda"
+  ],
+  "ranges": {
+   "RPM": [
+    1500,
+    5000
+   ],
+   "Throttle position": [
+    0,
+    80
+   ],
+   "Lambda": [
+    0.75,
+    0.95
+   ]
+  }
+ },
+ "stored.zip": {
+  "meta": "4 ch · 0:10.0 · CSV",
+  "channels": 4,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Lambda A",
+   "MAP"
+  ],
+  "ranges": {
+   "RPM": [
+    1500,
+    3995
+   ],
+   "TPS": [
+    0,
+    99
+   ],
+   "Lambda A": [
+    0.9,
+    1.399
+   ],
+   "MAP": [
+    90,
+    189.8
+   ]
+  }
+ },
+ "test.ld": {
+  "meta": "3 ch · 0:30.0 · MoTeC .ld · GT3 Test · Dubai",
+  "channels": 3,
+  "standard": [
+   "Engine Speed",
+   "Throttle Pos",
+   "Lambda 1"
+  ],
+  "ranges": {
+   "Engine Speed": [
+    500,
+    5500
+   ],
+   "Throttle Pos": [
+    10,
+    90
+   ],
+   "Lambda 1": [
+    0.75,
+    0.95
+   ]
+  }
+ },
+ "test.mlg": {
+  "meta": "3 ch · 0:30.0 · MegaLogViewer .mlg",
+  "channels": 3,
+  "standard": [
+   "RPM",
+   "TPS",
+   "Advance"
+  ],
+  "ranges": {
+   "RPM": [
+    500,
+    3499
+   ],
+   "TPS": [
+    10,
+    89.5
+   ],
+   "Advance": [
+    10,
+    30
+   ]
+  }
+ },
+ "test.vbo": {
+  "meta": "6 ch · 0:39.9 · Racelogic .vbo",
+  "channels": 6,
+  "standard": [
+   "velocity",
+   "heading"
+  ],
+  "ranges": {
+   "velocity": [
+    50,
+    129.8
+   ],
+   "heading": [
+    0,
+    359
+   ]
+  }
+ }
+}
