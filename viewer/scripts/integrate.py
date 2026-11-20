@@ -74,7 +74,7 @@ rep("""    const f = $('fileIn').files[0]; if (!f) return;
 # notes: the full list of formats
 import re as _re
 s = _re.sub(r'<li><b>الصيغ:</b>[^<]*</li>', '<li><b>الصيغ:</b> HP Tuners .hpl (الجديد والقديم)، VCM CSV، LiveLink CSV، MoTeC .ld (M150/M1/i2)، AiM .xrk/.xrz، Link .llg/.llg5، ECUMaster .emublog/.emuprolog، FuelTech .ftml، Emerald .lg1+.lg2 (اختارهم مع بعض)، DynamicEFI .dat، Haltech NSP، MaxxECU .MaxxECU-log و .MaxxECU-Zip-log، MegaLogViewer .mlg، ECUMaster/RomRaider/Woolich/MHD وغيرها CSV، VBO، وأي لوق داخل ZIP</li>', s, count=1)
-s = s.replace('<span>v9</span>', '<span>v15</span>', 1)
+s = s.replace('<span>v9</span>', '<span>v16</span>', 1)
 
 # keep the shared grid inside a memory budget (long, many-channel logs)
 rep("""    const step = 1 / Math.min(maxRate, Math.max(1, Math.round(rate)));""",

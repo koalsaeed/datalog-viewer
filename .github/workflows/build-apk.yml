@@ -5,6 +5,10 @@ name: Build Android APK
 on:
   workflow_dispatch:
 
+# Publishing the APK as a release needs write access to the repository's contents.
+permissions:
+  contents: write
+
 jobs:
   # The viewer page the app loads, tested in Chromium on real sample logs. No APK is
   # built unless these pass.
@@ -82,7 +86,8 @@ jobs:
             set -- $spec
             cp "assets/icon/icon-$2.png" "android/app/src/main/res/mipmap-$1/ic_launcher.png"
           done
-          sed -i 's/android:label="[^"]*"/android:label="PWP datalogger"/' android/app/src/main/AndroidManifest.xml
+          rm -rf android/app/src/main/res/mipmap-anydpi*   # an adaptive icon there would replace ours on Android 8+
+          sed -i 's/android:label="[^"]*"/android:label="PWP Log Viewer"/' android/app/src/main/AndroidManifest.xml
           grep -o 'android:label="[^"]*"' android/app/src/main/AndroidManifest.xml
           # The viewer page loads its fonts from Google Fonts.
           sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' android/app/src/main/AndroidManifest.xml
@@ -92,7 +97,9 @@ jobs:
         run: flutter pub get
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk PWP-Log-Viewer.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -100,3 +107,17 @@ jobs:
           name: datalog-viewer-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
+      # A public download for testers, no GitHub account needed. The newest build is always at
+      # https://github.com/<owner>/<repo>/releases/latest/download/PWP-Log-Viewer.apk
+      - name: Publish as a release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: PWP Log Viewer · test build ${{ github.run_number }}
+          body: |
+            Test build of PWP Log Viewer for Android. Download PWP-Log-Viewer.apk below and open it on the phone.
+            Remove an older test build first: each build is signed with a new key, so it cannot install over the last one.
+          files: PWP-Log-Viewer.apk
+          make_latest: true

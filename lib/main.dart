@@ -28,7 +28,7 @@ class ViewerTestApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      title: 'PWP datalogger',
+      title: 'PWP Log Viewer',
       debugShowCheckedModeBanner: false,
       home: ViewerPage(),
     );
